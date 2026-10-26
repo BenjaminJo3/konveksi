@@ -1,0 +1,48 @@
+<?php
+
+return [
+    'accepted' => ':attribute harus disetujui.',
+    'date' => ':attribute harus berupa tanggal yang valid.',
+    'email' => 'Format :attribute tidak valid.',
+    'gt' => [
+        'numeric' => ':attribute harus lebih besar dari :value.',
+    ],
+    'in' => 'Pilihan :attribute tidak valid.',
+    'integer' => ':attribute harus berupa bilangan bulat.',
+    'max' => [
+        'numeric' => ':attribute tidak boleh lebih dari :max.',
+        'string' => ':attribute tidak boleh lebih dari :max karakter.',
+    ],
+    'min' => [
+        'numeric' => ':attribute minimal :min.',
+        'string' => ':attribute minimal :min karakter.',
+    ],
+    'numeric' => ':attribute harus berupa angka.',
+    'required' => ':attribute wajib diisi.',
+    'string' => ':attribute harus berupa teks.',
+    'unique' => ':attribute sudah digunakan.',
+    'attributes' => [
+        'accepted_quantity' => 'jumlah diterima baik',
+        'action' => 'langkah transaksi',
+        'batch' => 'nomor batch',
+        'color' => 'warna',
+        'delivery_due_at' => 'tanggal target selesai',
+        'email' => 'email',
+        'fabric_estimate' => 'estimasi kebutuhan kain',
+        'fabric_ratio' => 'rasio hasil per yard',
+        'fabric_used' => 'pemakaian kain aktual',
+        'material_type' => 'tipe material',
+        'notes' => 'catatan',
+        'order_quantity' => 'target jumlah produksi',
+        'po_number' => 'nomor PO',
+        'process' => 'jenis proses',
+        'product_name' => 'nama produk',
+        'quantity' => 'jumlah',
+        'receiver' => 'nama penerima',
+        'received_by' => 'nama penerima material',
+        'reference' => 'nomor referensi',
+        'rejected_quantity' => 'jumlah reject',
+        'unit' => 'satuan',
+        'yield_category' => 'kategori hasil cutting',
+    ],
+];

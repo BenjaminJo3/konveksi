@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Services\RolePermissionService;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnsurePermission
+{
+    public function handle(Request $request, Closure $next, string $permission): Response
+    {
+        abort_unless(
+            $request->user() && app(RolePermissionService::class)->allows($request->user(), $permission),
+            403,
+        );
+
+        return $next($request);
+    }
+}
