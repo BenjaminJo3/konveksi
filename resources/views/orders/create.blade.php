@@ -115,18 +115,140 @@
     <script>
         (() => {
             const items = document.querySelector('#po-items');
+            const sources = {
+                categories: [...document.querySelectorAll('#po-categories option')],
+                subCategories: [...document.querySelectorAll('#po-sub-categories option')],
+                models: [...document.querySelectorAll('#po-models option')],
+                products: [...document.querySelectorAll('#po-products option')],
+                sizes: [...document.querySelectorAll('#po-sizes option')],
+                colors: [...document.querySelectorAll('#po-colors option')],
+            };
+            const normalize = (value) => value.trim().toLocaleLowerCase();
+            let rowNumber = 0;
+
+            const listFor = (item, key, input, options) => {
+                const listId = `po-${item.dataset.masterFilterId}-${key}`;
+                let list = document.getElementById(listId);
+                if (!list) {
+                    list = document.createElement('datalist');
+                    list.id = listId;
+                    document.body.append(list);
+                }
+
+                list.replaceChildren(...options.map((option) => option.cloneNode(true)));
+                input.setAttribute('list', listId);
+            };
+
+            const updateSuggestions = (item) => {
+                if (!item.dataset.masterFilterId) {
+                    item.dataset.masterFilterId = String(++rowNumber);
+                }
+
+                const field = (name) => item.querySelector(`[name$="[${name}]"]`);
+                const categoryInput = item.querySelector('[data-po-category]');
+                const subCategoryInput = item.querySelector('[data-po-sub-category]');
+                const productInput = item.querySelector('[data-po-product]');
+                const modelInput = field('model');
+                const sizeInput = field('size');
+                const colorInput = field('color');
+                const category = sources.categories.find((option) =>
+                    normalize(option.value) === normalize(categoryInput.value));
+                const subCategories = category
+                    ? sources.subCategories.filter((option) => option.dataset.categoryId === category.dataset.categoryId)
+                    : [];
+                const subCategory = subCategories.find((option) =>
+                    normalize(option.value) === normalize(subCategoryInput.value));
+                const models = category
+                    ? sources.models.filter((option) => option.dataset.categoryId === category.dataset.categoryId
+                        && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId))
+                    : [];
+                const model = models.find((option) => normalize(option.value) === normalize(modelInput.value));
+                let products = category
+                    ? sources.products.filter((option) => option.dataset.categoryId === category.dataset.categoryId
+                        && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId)
+                        && (!model || option.dataset.modelId === model.dataset.modelId))
+                    : [];
+
+                const selectedSize = sizeInput.value.trim();
+                const selectedColor = colorInput.value.trim();
+                if (selectedSize) {
+                    products = products.filter((option) => normalize(option.dataset.size) === normalize(selectedSize));
+                }
+                if (selectedColor) {
+                    products = products.filter((option) => normalize(option.dataset.color) === normalize(selectedColor));
+                }
+
+                const distinct = (options, key) => [...new Map(options.map((option) =>
+                    [normalize(option.dataset[key]), option.dataset[key]])).values()]
+                    .filter(Boolean)
+                    .map((value) => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        return option;
+                    });
+
+                listFor(item, 'sub-categories', subCategoryInput, subCategories);
+                listFor(item, 'models', modelInput, models);
+                listFor(item, 'products', productInput, products);
+                listFor(item, 'sizes', sizeInput, distinct(products, 'size'));
+                listFor(item, 'colors', colorInput, distinct(products, 'color'));
+            };
+
+            items?.querySelectorAll('[data-item]').forEach(updateSuggestions);
             items?.addEventListener('input', (event) => {
-                if (!(event.target instanceof HTMLInputElement) || !event.target.matches('[data-po-category]')) {
+                if (!(event.target instanceof HTMLInputElement)) {
                     return;
                 }
 
-                window.setTimeout(() => {
-                    event.target.closest('[data-item]')?.querySelectorAll(
-                        '[data-po-sub-category], [data-po-product], [name$="[model]"], [name$="[size]"], [name$="[color]"]',
-                    ).forEach((input) => {
-                        input.disabled = false;
-                    });
+                const item = event.target.closest('[data-item]');
+                if (!item) {
+                    return;
+                }
+
+                if (event.target.matches('[data-po-category], [data-po-sub-category], [data-po-product], [name$="[model]"], [name$="[size]"], [name$="[color]"]')) {
+                    updateSuggestions(item);
+                }
+            });
+            items?.addEventListener('change', (event) => {
+                const input = event.target;
+                if (!(input instanceof HTMLInputElement) || !input.matches('[data-po-product]')) {
+                    return;
+                }
+
+                const item = input.closest('[data-item]');
+                const field = (name) => item?.querySelector(`[name$="[${name}]"]`);
+                const category = sources.categories.find((option) =>
+                    normalize(option.value) === normalize(field('category')?.value ?? ''));
+                const subCategory = sources.subCategories.find((option) =>
+                    normalize(option.value) === normalize(field('sub_category')?.value ?? '')
+                    && (!category || option.dataset.categoryId === category.dataset.categoryId));
+                const model = sources.models.find((option) =>
+                    normalize(option.value) === normalize(field('model')?.value ?? '')
+                    && (!category || option.dataset.categoryId === category.dataset.categoryId)
+                    && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId));
+                const product = sources.products.find((option) => option.value === input.value
+                    && (!category || option.dataset.categoryId === category.dataset.categoryId)
+                    && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId)
+                    && (!model || option.dataset.modelId === model.dataset.modelId));
+                if (!item || !product) {
+                    return;
+                }
+
+                const fields = {
+                    category: product.dataset.category,
+                    sub_category: product.dataset.subCategory,
+                    model: product.dataset.model,
+                    size: product.dataset.size,
+                    color: product.dataset.color,
+                    fabric_name: product.dataset.fabric,
+                };
+                Object.entries(fields).forEach(([name, value]) => {
+                    const target = item.querySelector(`[name$="[${name}]"]`);
+                    if (target instanceof HTMLInputElement && value) {
+                        target.value = value;
+                    }
                 });
+                updateSuggestions(item);
             });
         })();
     </script>

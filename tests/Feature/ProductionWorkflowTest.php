@@ -853,7 +853,8 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('name="items[0][model]" value="" required placeholder="Pilih kategori dulu"', false)
             ->assertSee('name="items[0][size]" value="" required placeholder="Pilih kategori dulu"', false)
             ->assertSee('name="items[0][color]" value="" required placeholder="Pilih kategori dulu"', false)
-            ->assertSee("input.disabled = false", false)
+            ->assertSee("listFor(item, 'sub-categories', subCategoryInput, subCategories)", false)
+            ->assertSee('option.dataset.categoryId === category.dataset.categoryId', false)
             ->assertSee('Otomatis');
     }
 
