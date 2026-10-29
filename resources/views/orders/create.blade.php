@@ -153,6 +153,9 @@
                 const colorInput = field('color');
                 const category = sources.categories.find((option) =>
                     normalize(option.value) === normalize(categoryInput.value));
+                [subCategoryInput, productInput, modelInput, sizeInput, colorInput].forEach((input) => {
+                    input.disabled = !category;
+                });
                 const subCategories = category
                     ? sources.subCategories.filter((option) => option.dataset.categoryId === category.dataset.categoryId)
                     : [];
@@ -215,7 +218,15 @@
                 });
             };
 
-            items?.querySelectorAll('[data-item]').forEach(updateSuggestions);
+            items?.querySelectorAll('[data-item]').forEach((item) => {
+                const categoryInput = item.querySelector('[data-po-category]');
+                const category = sources.categories.find((option) =>
+                    normalize(option.value) === normalize(categoryInput.value));
+                if (!category) {
+                    clearDependentFields(item, categoryInput);
+                }
+                updateSuggestions(item);
+            });
             items?.addEventListener('input', (event) => {
                 if (!(event.target instanceof HTMLInputElement)) {
                     return;
