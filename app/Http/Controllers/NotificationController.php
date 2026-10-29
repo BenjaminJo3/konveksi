@@ -6,11 +6,18 @@ use App\Models\WorkflowEntry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationController extends Controller
 {
     public function markRead(Request $request): JsonResponse
     {
+        if (! Schema::hasTable('user_notification_reads')) {
+            return response()->json([
+                'message' => 'Fitur notifikasi belum tersedia. Jalankan php artisan migrate --force pada server.',
+            ], 503);
+        }
+
         $lastReadEntryId = (int) WorkflowEntry::query()->max('id');
         $now = now();
 

@@ -12,6 +12,7 @@ use Database\Seeders\SuperAdminAccountSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class ProductionWorkflowTest extends TestCase
@@ -157,6 +158,22 @@ class ProductionWorkflowTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('id="notification-unread-count"', false);
+    }
+
+    public function test_application_stays_available_when_notification_read_migration_is_pending(): void
+    {
+        Schema::shouldReceive('hasTable')
+            ->with('user_notification_reads')
+            ->twice()
+            ->andReturn(false);
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->get(route('dashboard'))
+            ->assertOk();
+
+        $this->postJson(route('notifications.read'))
+            ->assertStatus(503)
+            ->assertJsonPath('message', 'Fitur notifikasi belum tersedia. Jalankan php artisan migrate --force pada server.');
     }
 
     public function test_dashboard_period_tabs_filter_purchase_orders_by_po_date(): void
