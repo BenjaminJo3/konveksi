@@ -194,6 +194,27 @@
                 listFor(item, 'colors', colorInput, distinct(products, 'color'));
             };
 
+            const clearDependentFields = (item, input) => {
+                const downstreamFields = input.matches('[data-po-category]')
+                    ? ['sub_category', 'product_name', 'model', 'size', 'color', 'fabric_name']
+                    : input.matches('[data-po-sub-category]')
+                        ? ['product_name', 'model', 'size', 'color', 'fabric_name']
+                        : input.matches('[name$="[model]"]')
+                            ? ['product_name', 'size', 'color', 'fabric_name']
+                            : input.matches('[name$="[size]"]')
+                                ? ['product_name', 'color', 'fabric_name']
+                                : input.matches('[name$="[color]"]')
+                                    ? ['product_name', 'fabric_name']
+                                    : [];
+
+                downstreamFields.forEach((name) => {
+                    const input = item.querySelector(`[name$="[${name}]"]`);
+                    if (input instanceof HTMLInputElement) {
+                        input.value = '';
+                    }
+                });
+            };
+
             items?.querySelectorAll('[data-item]').forEach(updateSuggestions);
             items?.addEventListener('input', (event) => {
                 if (!(event.target instanceof HTMLInputElement)) {
@@ -206,16 +227,35 @@
                 }
 
                 if (event.target.matches('[data-po-category], [data-po-sub-category], [data-po-product], [name$="[model]"], [name$="[size]"], [name$="[color]"]')) {
+                    clearDependentFields(item, event.target);
                     updateSuggestions(item);
                 }
             });
             items?.addEventListener('change', (event) => {
                 const input = event.target;
-                if (!(input instanceof HTMLInputElement) || !input.matches('[data-po-product]')) {
+                if (!(input instanceof HTMLInputElement)) {
                     return;
                 }
 
                 const item = input.closest('[data-item]');
+                if (!item) {
+                    return;
+                }
+
+                if (input.matches('[data-po-category]')) {
+                    clearDependentFields(item, input);
+                    updateSuggestions(item);
+                    return;
+                }
+
+                if (!input.matches('[data-po-product]')) {
+                    if (input.matches('[data-po-sub-category], [name$="[model]"], [name$="[size]"], [name$="[color]"]')) {
+                        clearDependentFields(item, input);
+                    }
+                    updateSuggestions(item);
+                    return;
+                }
+
                 const field = (name) => item?.querySelector(`[name$="[${name}]"]`);
                 const category = sources.categories.find((option) =>
                     normalize(option.value) === normalize(field('category')?.value ?? ''));
@@ -230,7 +270,7 @@
                     && (!category || option.dataset.categoryId === category.dataset.categoryId)
                     && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId)
                     && (!model || option.dataset.modelId === model.dataset.modelId));
-                if (!item || !product) {
+                if (!product) {
                     return;
                 }
 
