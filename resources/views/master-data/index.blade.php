@@ -14,6 +14,16 @@
         <a href="{{ route('master-data.create', $type) }}" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-emerald-800">+ Input {{ $config['singular'] }}</a>
     </div>
 
+    <form method="GET" action="{{ route('master-data.index', $type) }}" class="mb-4 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row">
+        <input type="search" name="q" value="{{ $search }}" aria-label="Cari {{ strtolower($config['label']) }}" placeholder="Cari kode atau nama {{ strtolower($config['singular']) }}..." class="!min-w-0 flex-1">
+        <div class="flex gap-2">
+            <button type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">Cari</button>
+            @if ($search !== '')
+                <a href="{{ route('master-data.index', $type) }}" class="rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50">Reset</a>
+            @endif
+        </div>
+    </form>
+
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         @if ($rows->isEmpty())
             <div class="px-6 py-16 text-center">

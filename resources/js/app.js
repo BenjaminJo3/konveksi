@@ -1,6 +1,55 @@
 import './bootstrap';
 import JsBarcode from 'jsbarcode';
 
+const notificationTrigger = document.querySelector('[data-notification-trigger]');
+if (notificationTrigger instanceof HTMLElement) {
+    notificationTrigger.addEventListener('click', async (event) => {
+        const details = notificationTrigger.closest('details');
+        if (!(details instanceof HTMLDetailsElement) || details.open) {
+            return;
+        }
+
+        const errorMessage = details.querySelector('[data-notification-error]');
+        if (errorMessage instanceof HTMLElement) {
+            errorMessage.hidden = true;
+        }
+
+        try {
+            const response = await fetch(notificationTrigger.dataset.readUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                credentials: 'same-origin',
+            });
+            if (!response.ok) {
+                throw new Error(`Tandai notifikasi gagal (${response.status}).`);
+            }
+
+            const result = await response.json();
+            const badge = document.querySelector('#notification-unread-count');
+            const summary = document.querySelector('#notification-unread-summary');
+            if (result.unread_count === 0) {
+                badge?.remove();
+                summary?.remove();
+            } else {
+                if (badge instanceof HTMLElement) {
+                    badge.textContent = result.unread_count > 99 ? '99+' : String(result.unread_count);
+                }
+                if (summary instanceof HTMLElement) {
+                    summary.textContent = `${result.unread_count} belum dibaca`;
+                }
+            }
+        } catch (error) {
+            if (errorMessage instanceof HTMLElement) {
+                errorMessage.hidden = false;
+            }
+            console.error(error);
+        }
+    });
+}
+
 const sidebarToggle = document.querySelector('#sidebar-toggle');
 const sidebar = document.querySelector('#app-sidebar');
 const sidebarBackdrop = document.querySelector('#sidebar-backdrop');
@@ -385,6 +434,68 @@ document.querySelectorAll('[data-demo-email]').forEach((button) => {
 const poItems = document.querySelector('#po-items');
 const poItemTemplate = document.querySelector('#po-item-template');
 if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElement) {
+    const categoryList = document.querySelector('#po-categories');
+    const subCategoryList = document.querySelector('#po-sub-categories');
+    const modelList = document.querySelector('#po-models');
+    const productList = document.querySelector('#po-products');
+    const masterOptions = (list) => [...list.options].map((option) => option.cloneNode(true));
+    const categories = masterOptions(categoryList);
+    const subCategories = masterOptions(subCategoryList);
+    const models = masterOptions(modelList);
+    const products = masterOptions(productList);
+    const normalized = (value) => value.trim().toLocaleLowerCase();
+    const matchingOption = (options, value) => options.find((option) => normalized(option.value) === normalized(value));
+    const updateMasterSuggestions = (item) => {
+        const categoryInput = item.querySelector('[data-po-category]');
+        const subCategoryInput = item.querySelector('[data-po-sub-category]');
+        const modelInput = item.querySelector('[name$="[model]"]');
+        const category = matchingOption(categories, categoryInput.value);
+        const dependentInputs = [
+            subCategoryInput,
+            item.querySelector('[data-po-product]'),
+            modelInput,
+            item.querySelector('[name$="[size]"]'),
+            item.querySelector('[name$="[color]"]'),
+        ];
+        dependentInputs.forEach((input) => {
+            input.disabled = !category;
+            if (!category) {
+                input.value = '';
+            }
+        });
+        const visibleSubCategories = category
+            ? subCategories.filter((option) => option.dataset.categoryId === category.dataset.categoryId)
+            : [];
+        const knownSubCategory = matchingOption(subCategories, subCategoryInput.value);
+        let subCategory = matchingOption(visibleSubCategories, subCategoryInput.value);
+        if (knownSubCategory && !subCategory) {
+            subCategoryInput.value = '';
+            subCategory = null;
+        }
+        const visibleModels = models.filter((option) => category
+            && option.dataset.categoryId === category.dataset.categoryId
+            && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId));
+        const knownModel = matchingOption(models, modelInput.value);
+        let model = matchingOption(visibleModels, modelInput.value);
+        if (knownModel && !model) {
+            modelInput.value = '';
+            model = null;
+        }
+        const visibleProducts = products.filter((option) => category
+            && option.dataset.categoryId === category.dataset.categoryId
+            && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId)
+            && (!model || option.dataset.modelId === model.dataset.modelId));
+        const productInput = item.querySelector('[data-po-product]');
+        const knownProduct = matchingOption(products, productInput.value);
+        if (knownProduct && !visibleProducts.some((option) => normalized(option.value) === normalized(productInput.value))) {
+            productInput.value = '';
+        }
+
+        subCategoryList.replaceChildren(...visibleSubCategories.map((option) => option.cloneNode(true)));
+        modelList.replaceChildren(...visibleModels.map((option) => option.cloneNode(true)));
+        productList.replaceChildren(...visibleProducts.map((option) => option.cloneNode(true)));
+    };
+
     const updateItems = () => {
         const cards = [...poItems.querySelectorAll('[data-item]')];
 
@@ -412,6 +523,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
             input.name = input.name.replaceAll('__INDEX__', String(index));
         });
         poItems.append(fragment);
+        updateMasterSuggestions(poItems.lastElementChild);
         updateItems();
     });
 
@@ -422,7 +534,65 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
             updateItems();
         }
     });
-    poItems.addEventListener('input', updateItems);
+    poItems.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const item = input.closest('[data-item]');
+        if (!item) {
+            return;
+        }
+
+        if (input.matches('[data-po-category], [data-po-sub-category], [name$="[model]"]')) {
+            updateMasterSuggestions(item);
+        }
+        if (!input.matches('[data-po-product]')) {
+            return;
+        }
+
+        const category = matchingOption(categories, item.querySelector('[data-po-category]').value);
+        const subCategory = matchingOption(subCategories, item.querySelector('[data-po-sub-category]').value);
+        const model = matchingOption(models, item.querySelector('[name$="[model]"]').value);
+        const product = products.find((option) => option.value === input.value
+            && (!category || option.dataset.categoryId === category.dataset.categoryId)
+            && (!subCategory || option.dataset.subCategoryId === subCategory.dataset.subCategoryId)
+            && (!model || option.dataset.modelId === model.dataset.modelId));
+        if (!product) {
+            return;
+        }
+
+        const fields = {
+            category: product.dataset.category,
+            sub_category: product.dataset.subCategory,
+            model: product.dataset.model,
+            size: product.dataset.size,
+            color: product.dataset.color,
+            fabric_name: product.dataset.fabric,
+        };
+        Object.entries(fields).forEach(([name, value]) => {
+            const field = item.querySelector(`[name$="[${name}]"]`);
+            if (field instanceof HTMLInputElement && value) {
+                field.value = value;
+            }
+        });
+        updateMasterSuggestions(item);
+    });
+    poItems.addEventListener('input', (event) => {
+        const input = event.target;
+        if (input instanceof HTMLInputElement && input.matches('[data-po-category], [data-po-sub-category], [name$="[model]"]')) {
+            updateMasterSuggestions(input.closest('[data-item]'));
+        }
+        updateItems();
+    });
+    poItems.addEventListener('focusin', (event) => {
+        const input = event.target;
+        if (input instanceof HTMLInputElement) {
+            updateMasterSuggestions(input.closest('[data-item]'));
+        }
+    });
+    updateMasterSuggestions(poItems.querySelector('[data-item]'));
     updateItems();
 }
 

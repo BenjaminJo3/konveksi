@@ -149,32 +149,60 @@ class ProductMasterController extends Controller
         return redirect()->route('master-data.products')->with('success', 'Master barang berhasil disimpan.');
     }
 
-    public function index(string $type): View
+    public function index(Request $request, string $type): View
     {
         $config = $this->masterConfig($type);
-        $rows = DB::table($config['table'])->orderByDesc('id')->paginate(20);
+        $query = DB::table($config['table'])->orderByDesc('id');
 
         if ($type === 'conversions') {
-            $rows = DB::table('master_unit_conversions as conversions')
+            $query = DB::table('master_unit_conversions as conversions')
                 ->join('master_units as source', 'source.id', '=', 'conversions.from_unit_id')
                 ->join('master_units as target', 'target.id', '=', 'conversions.to_unit_id')
                 ->select('conversions.*', 'source.name as source_name', 'source.symbol as source_symbol', 'target.name as target_name', 'target.symbol as target_symbol')
-                ->orderByDesc('conversions.id')
-                ->paginate(20);
+                ->orderByDesc('conversions.id');
         } elseif ($type === 'sub-categories') {
-            $rows = DB::table('master_sub_categories as children')
+            $query = DB::table('master_sub_categories as children')
                 ->join('master_categories as parents', 'parents.id', '=', 'children.category_id')
                 ->select('children.*', 'parents.name as category_name')
-                ->orderByDesc('children.id')->paginate(20);
+                ->orderByDesc('children.id');
         } elseif ($type === 'models') {
-            $rows = DB::table('master_models as models')
+            $query = DB::table('master_models as models')
                 ->join('master_categories as categories', 'categories.id', '=', 'models.category_id')
                 ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'models.sub_category_id')
                 ->select('models.*', 'categories.name as category_name', 'sub_categories.name as sub_category_name')
-                ->orderByDesc('models.id')->paginate(20);
+                ->orderByDesc('models.id');
         }
 
-        return view('master-data.index', compact('config', 'rows', 'type'));
+        $search = $request->string('q')->trim()->toString();
+        if ($search !== '') {
+            $query->where(function ($builder) use ($type, $search): void {
+                $like = '%'.$search.'%';
+                if ($type === 'conversions') {
+                    $builder->where('conversions.code', 'like', $like)
+                        ->orWhere('source.name', 'like', $like)
+                        ->orWhere('target.name', 'like', $like);
+                } elseif ($type === 'sub-categories') {
+                    $builder->where('children.code', 'like', $like)
+                        ->orWhere('children.name', 'like', $like)
+                        ->orWhere('parents.name', 'like', $like);
+                } elseif ($type === 'models') {
+                    $builder->where('models.code', 'like', $like)
+                        ->orWhere('models.name', 'like', $like)
+                        ->orWhere('categories.name', 'like', $like)
+                        ->orWhere('sub_categories.name', 'like', $like);
+                } else {
+                    $builder->where('code', 'like', $like)
+                        ->orWhere('name', 'like', $like);
+                    if ($type === 'units') {
+                        $builder->orWhere('symbol', 'like', $like);
+                    }
+                }
+            });
+        }
+
+        $rows = $query->paginate(20)->withQueryString();
+
+        return view('master-data.index', compact('config', 'rows', 'type', 'search'));
     }
 
     public function create(string $type): View

@@ -13,6 +13,29 @@
 
     <form method="POST" action="{{ route('orders.store') }}" class="space-y-5">
         @csrf
+        <datalist id="po-categories">
+            @foreach ($masters['categories'] as $category)<option value="{{ $category->name }}" data-category-id="{{ $category->id }}">@endforeach
+        </datalist>
+        <datalist id="po-sub-categories">
+            @foreach ($masters['subCategories'] as $subCategory)<option value="{{ $subCategory->name }}" data-sub-category-id="{{ $subCategory->id }}" data-category-id="{{ $subCategory->category_id }}">@endforeach
+        </datalist>
+        <datalist id="po-models">
+            @foreach ($masters['models'] as $model)<option value="{{ $model->name }}" data-model-id="{{ $model->id }}" data-category-id="{{ $model->category_id }}" data-sub-category-id="{{ $model->sub_category_id }}">@endforeach
+        </datalist>
+        <datalist id="po-sizes">
+            @foreach ($masters['sizes'] as $name)<option value="{{ $name }}">@endforeach
+        </datalist>
+        <datalist id="po-colors">
+            @foreach ($masters['colors'] as $name)<option value="{{ $name }}">@endforeach
+        </datalist>
+        <datalist id="po-fabrics">
+            @foreach ($masters['fabrics'] as $name)<option value="{{ $name }}">@endforeach
+        </datalist>
+        <datalist id="po-products">
+            @foreach ($masters['products'] as $product)
+                <option value="{{ $product->name }}" label="{{ $product->code }} · {{ $product->category_name }} / {{ $product->sub_category_name }} / {{ $product->model_name }} / {{ $product->size_name }} / {{ $product->color_name }}" data-category="{{ $product->category_name }}" data-category-id="{{ $product->category_id }}" data-sub-category="{{ $product->sub_category_name }}" data-sub-category-id="{{ $product->sub_category_id }}" data-model="{{ $product->model_name }}" data-model-id="{{ $product->model_id }}" data-size="{{ $product->size_name }}" data-color="{{ $product->color_name }}" data-fabric="{{ $product->fabric_name }}"></option>
+            @endforeach
+        </datalist>
         <section class="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-7">
             <div class="mb-6 border-b border-slate-100 pb-4">
                 <h3 class="text-sm font-bold text-slate-900">Informasi Purchase Order</h3>
@@ -47,7 +70,7 @@
             <div class="flex flex-col justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:px-7">
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Rincian item PO</h3>
-                    <p class="mt-1 text-xs text-slate-400"><span class="hidden md:inline">Grid ringkas untuk input cepat. </span><span class="md:hidden">Form menyesuaikan layar ponsel. </span>Rasio kain per pcs menjadi dasar perhitungan estimasi target.</p>
+                    <p class="mt-1 text-xs text-slate-400"><span class="hidden md:inline">Grid ringkas untuk input cepat. </span><span class="md:hidden">Form menyesuaikan layar ponsel. </span>Ketik untuk mencari data master; pilih produk katalog untuk mengisi atribut otomatis. Rasio kain per pcs menjadi dasar perhitungan estimasi target.</p>
                 </div>
                 <button type="button" id="add-po-item" class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">+ Tambah varian</button>
             </div>

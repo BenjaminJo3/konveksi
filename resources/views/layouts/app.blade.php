@@ -213,12 +213,12 @@
                         <p class="text-[11px] text-slate-400">Gunung Karang · Cibentang</p>
                     </div>
                     <details class="group relative">
-                        <summary aria-label="Notifikasi" class="relative flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-900/5">
+                        <summary aria-label="Notifikasi" data-notification-trigger data-read-url="{{ route('notifications.read') }}" class="relative flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-900/5">
                             <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17H9.143m10.286 0H4.571c1.43-1.43 2.286-3.428 2.286-5.714V9a5.143 5.143 0 0 1 10.286 0v2.286c0 2.286.857 4.284 2.286 5.714ZM13.714 19.286a1.714 1.714 0 0 1-3.428 0" />
                             </svg>
                             @if ($notificationCount > 0)
-                                <span class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold text-white">{{ $notificationCount > 99 ? '99+' : $notificationCount }}</span>
+                                <span id="notification-unread-count" class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold text-white">{{ $notificationCount > 99 ? '99+' : $notificationCount }}</span>
                             @endif
                         </summary>
                         <div class="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
@@ -228,9 +228,10 @@
                                     <p class="text-[11px] text-slate-400">Pembaruan alur produksi</p>
                                 </div>
                                 @if ($notificationCount > 0)
-                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{{ $notificationCount }} hari ini</span>
+                                    <span id="notification-unread-summary" class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{{ $notificationCount }} belum dibaca</span>
                                 @endif
                             </div>
+                            <p data-notification-error role="alert" hidden class="border-b border-rose-100 bg-rose-50 px-4 py-2 text-xs text-rose-700">Notifikasi belum dapat ditandai sudah dibaca. Silakan coba lagi.</p>
                             @if ($recentNotifications->isEmpty())
                                 <p class="px-4 py-8 text-center text-xs text-slate-400">Belum ada aktivitas produksi.</p>
                             @else

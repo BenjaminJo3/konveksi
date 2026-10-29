@@ -1,8 +1,10 @@
 /.phpunit.cache
+/.DS_Store
 /node_modules
 /public/build
 /public/hot
 /public/storage
+/database/*.sqlite
 /storage/*.key
 /storage/pail
 /vendor

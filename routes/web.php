@@ -11,6 +11,7 @@ use App\Http\Controllers\OperationalKanbanController;
 use App\Http\Controllers\RejectController;
 use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\MasterDataImportController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductMasterController;
 use App\Http\Controllers\ProfileController;
@@ -29,6 +30,7 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');

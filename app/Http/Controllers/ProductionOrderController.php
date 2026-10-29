@@ -76,7 +76,58 @@ class ProductionOrderController extends Controller
     {
         abort_unless(auth()->user()->canPermission('orders.create'), 403);
 
-        return view('orders.create');
+        return view('orders.create', [
+            'masters' => [
+                'categories' => DB::table('master_categories')->orderBy('name')->get(['id', 'name']),
+                'subCategories' => DB::table('master_sub_categories')
+                    ->join('master_categories', 'master_categories.id', '=', 'master_sub_categories.category_id')
+                    ->orderBy('master_sub_categories.name')
+                    ->get([
+                        'master_sub_categories.id',
+                        'master_sub_categories.name',
+                        'master_sub_categories.category_id',
+                    ]),
+                'models' => DB::table('master_models')
+                    ->join('master_sub_categories', 'master_sub_categories.id', '=', 'master_models.sub_category_id')
+                    ->orderBy('master_models.name')
+                    ->get([
+                        'master_models.id',
+                        'master_models.name',
+                        'master_models.category_id',
+                        'master_models.sub_category_id',
+                    ]),
+                'sizes' => DB::table('master_sizes')->orderBy('name')->pluck('name'),
+                'colors' => DB::table('master_colors')->orderBy('name')->pluck('name'),
+                'fabrics' => DB::table('master_products')
+                    ->whereNotNull('fabric_name')
+                    ->where('fabric_name', '!=', '')
+                    ->distinct()
+                    ->orderBy('fabric_name')
+                    ->pluck('fabric_name'),
+                'products' => DB::table('master_products as products')
+                    ->join('master_categories as categories', 'categories.id', '=', 'products.category_id')
+                    ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'products.sub_category_id')
+                    ->join('master_models as models', 'models.id', '=', 'products.model_id')
+                    ->join('master_sizes as sizes', 'sizes.id', '=', 'products.size_id')
+                    ->join('master_colors as colors', 'colors.id', '=', 'products.color_id')
+                    ->where('products.is_active', true)
+                    ->select([
+                        'products.code',
+                        'products.name',
+                        'products.fabric_name',
+                        'products.category_id',
+                        'products.sub_category_id',
+                        'products.model_id',
+                        'categories.name as category_name',
+                        'sub_categories.name as sub_category_name',
+                        'models.name as model_name',
+                        'sizes.name as size_name',
+                        'colors.name as color_name',
+                    ])
+                    ->orderBy('products.name')
+                    ->get(),
+            ],
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

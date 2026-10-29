@@ -112,6 +112,53 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('PO Vs H. Cutting');
     }
 
+    public function test_opening_notification_bell_marks_current_notifications_read_for_that_user(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        $otherUser = User::factory()->create(['role' => 'admin']);
+        $order = $this->makeOrder('draft', 10);
+        $notification = WorkflowEntry::create([
+            'production_order_id' => $order->id,
+            'user_id' => $user->id,
+            'action' => 'request_fabric',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('id="notification-unread-count"', false)
+            ->assertSee('data-notification-trigger', false);
+
+        $this->postJson(route('notifications.read'))
+            ->assertOk()
+            ->assertJson(['unread_count' => 0]);
+
+        $this->assertDatabaseHas('user_notification_reads', [
+            'user_id' => $user->id,
+            'last_read_entry_id' => $notification->id,
+        ]);
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('id="notification-unread-count"', false)
+            ->assertSee('Request Fabric');
+
+        $this->actingAs($otherUser)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('id="notification-unread-count"', false);
+
+        WorkflowEntry::create([
+            'production_order_id' => $order->id,
+            'user_id' => $user->id,
+            'action' => 'deliver_fabric',
+        ]);
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('id="notification-unread-count"', false);
+    }
+
     public function test_dashboard_period_tabs_filter_purchase_orders_by_po_date(): void
     {
         $todayOrder = $this->makeOrder('draft', 10);
@@ -784,7 +831,134 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('data-item', false)
             ->assertSee('max-h-[56vh]', false)
             ->assertSee('data-label="Kategori"', false)
+            ->assertSee('name="items[0][sub_category]" value="" required disabled', false)
+            ->assertSee('name="items[0][product_name]" value="" required disabled', false)
+            ->assertSee('name="items[0][model]" value="" required disabled', false)
+            ->assertSee('name="items[0][size]" value="" required disabled', false)
+            ->assertSee('name="items[0][color]" value="" required disabled', false)
             ->assertSee('Otomatis');
+    }
+
+    public function test_master_category_list_can_be_searched_by_name_or_code(): void
+    {
+        DB::table('master_categories')->insert([
+            [
+                'code' => 'KTG-CARI-01',
+                'name' => 'POLO LINEN',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'KTG-CARI-02',
+                'name' => 'RAYON',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('master-data.index', ['type' => 'categories', 'q' => 'POLO']))
+            ->assertOk()
+            ->assertSee('Cari kode atau nama kategori')
+            ->assertSee('POLO LINEN')
+            ->assertDontSee('RAYON');
+
+        $this->get(route('master-data.index', ['type' => 'categories', 'q' => 'KTG-CARI-02']))
+            ->assertOk()
+            ->assertSee('RAYON')
+            ->assertDontSee('POLO LINEN');
+    }
+
+    public function test_purchase_order_form_suggests_master_data_and_includes_product_attributes(): void
+    {
+        $now = now();
+        $categoryId = DB::table('master_categories')->insertGetId([
+            'code' => 'KTG-PO-001',
+            'name' => 'POLO LINEN',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $subCategoryId = DB::table('master_sub_categories')->insertGetId([
+            'category_id' => $categoryId,
+            'code' => 'SUB-PO-001',
+            'name' => 'Polo',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $otherCategoryId = DB::table('master_categories')->insertGetId([
+            'code' => 'KTG-PO-002',
+            'name' => 'Bahan',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $otherSubCategoryId = DB::table('master_sub_categories')->insertGetId([
+            'category_id' => $otherCategoryId,
+            'code' => 'SUB-PO-002',
+            'name' => 'Kain',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $modelId = DB::table('master_models')->insertGetId([
+            'category_id' => $categoryId,
+            'sub_category_id' => $subCategoryId,
+            'code' => 'MDL-PO-001',
+            'name' => 'Raglan',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $sizeId = DB::table('master_sizes')->insertGetId([
+            'code' => 'UKR-PO-001',
+            'name' => 'M',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $colorId = DB::table('master_colors')->insertGetId([
+            'code' => 'WRN-PO-001',
+            'name' => 'Navy',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $unitId = DB::table('master_units')->insertGetId([
+            'code' => 'UNT-PO-001',
+            'name' => 'Pcs',
+            'symbol' => 'pcs',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::table('master_products')->insert([
+            'code' => 'BRG-PO-001',
+            'name' => 'Polo Navy Raglan M',
+            'category_id' => $categoryId,
+            'sub_category_id' => $subCategoryId,
+            'model_id' => $modelId,
+            'size_id' => $sizeId,
+            'color_id' => $colorId,
+            'unit_id' => $unitId,
+            'fabric_name' => 'Cotton combed',
+            'is_active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'mydent']))
+            ->get(route('orders.create'))
+            ->assertOk()
+            ->assertSee('<datalist id="po-categories">', false)
+            ->assertSee('<option value="POLO LINEN" data-category-id="'.$categoryId.'">', false)
+            ->assertSee('<datalist id="po-products">', false)
+            ->assertSee('value="Polo Navy Raglan M"', false)
+            ->assertSee('value="Polo" data-sub-category-id="'.$subCategoryId.'" data-category-id="'.$categoryId.'"', false)
+            ->assertSee('value="Kain" data-sub-category-id="'.$otherSubCategoryId.'" data-category-id="'.$otherCategoryId.'"', false)
+            ->assertSee('data-po-category', false)
+            ->assertSee('data-po-sub-category', false)
+            ->assertSee('data-category="POLO LINEN"', false)
+            ->assertSee('data-category-id="'.$categoryId.'"', false)
+            ->assertSee('data-sub-category="Polo"', false)
+            ->assertSee('data-model="Raglan"', false)
+            ->assertSee('data-size="M"', false)
+            ->assertSee('data-color="Navy"', false)
+            ->assertSee('data-fabric="Cotton combed"', false);
     }
 
     public function test_purchase_order_grid_can_download_one_pdf_for_all_variants(): void
