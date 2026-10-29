@@ -113,31 +113,21 @@
         </tr>
     </template>
     <script>
-        const poItemsForCategory = document.querySelector('#po-items');
-        if (poItemsForCategory) {
-            const enableCategoryFields = (event) => {
-                const category = event.target;
-                if (!(category instanceof HTMLInputElement) || !category.matches('[data-po-category]')) {
+        (() => {
+            const items = document.querySelector('#po-items');
+            items?.addEventListener('input', (event) => {
+                if (!(event.target instanceof HTMLInputElement) || !event.target.matches('[data-po-category]')) {
                     return;
                 }
 
                 window.setTimeout(() => {
-                    const item = category.closest('[data-item]');
-                    if (!item) {
-                        return;
-                    }
-
-                    const enabled = category.value.trim() !== '';
-                    item.querySelectorAll('[data-po-requires-category]').forEach((input) => {
-                        input.disabled = !enabled;
-                        if (!enabled) {
-                            input.value = '';
-                        }
+                    event.target.closest('[data-item]')?.querySelectorAll(
+                        '[data-po-sub-category], [data-po-product], [name$="[model]"], [name$="[size]"], [name$="[color]"]',
+                    ).forEach((input) => {
+                        input.disabled = false;
                     });
                 });
-            };
-            poItemsForCategory.addEventListener('input', enableCategoryFields);
-            poItemsForCategory.addEventListener('change', enableCategoryFields);
-        }
+            });
+        })();
     </script>
 @endsection

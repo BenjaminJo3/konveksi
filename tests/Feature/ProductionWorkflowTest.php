@@ -848,13 +848,12 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('data-item', false)
             ->assertSee('max-h-[56vh]', false)
             ->assertSee('data-label="Kategori"', false)
-            ->assertSee('name="items[0][sub_category]" value="" required disabled', false)
-            ->assertSee('name="items[0][product_name]" value="" required disabled', false)
-            ->assertSee('name="items[0][model]" value="" required disabled', false)
-            ->assertSee('name="items[0][size]" value="" required disabled', false)
-            ->assertSee('name="items[0][color]" value="" required disabled', false)
-            ->assertSee('data-po-requires-category', false)
-            ->assertSee("poItemsForCategory.addEventListener('input', enableCategoryFields)", false)
+            ->assertSee('name="items[0][sub_category]" value="" required placeholder="Pilih kategori dulu"', false)
+            ->assertSee('name="items[0][product_name]" value="" required placeholder="Pilih kategori dulu"', false)
+            ->assertSee('name="items[0][model]" value="" required placeholder="Pilih kategori dulu"', false)
+            ->assertSee('name="items[0][size]" value="" required placeholder="Pilih kategori dulu"', false)
+            ->assertSee('name="items[0][color]" value="" required placeholder="Pilih kategori dulu"', false)
+            ->assertSee("input.disabled = false", false)
             ->assertSee('Otomatis');
     }
 

@@ -450,20 +450,6 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
         const subCategoryInput = item.querySelector('[data-po-sub-category]');
         const modelInput = item.querySelector('[name$="[model]"]');
         const category = matchingOption(categories, categoryInput.value);
-        const categoryEntered = categoryInput.value.trim() !== '';
-        const dependentInputs = [
-            subCategoryInput,
-            item.querySelector('[data-po-product]'),
-            modelInput,
-            item.querySelector('[name$="[size]"]'),
-            item.querySelector('[name$="[color]"]'),
-        ];
-        dependentInputs.forEach((input) => {
-            input.disabled = !categoryEntered;
-            if (!category) {
-                input.value = '';
-            }
-        });
         const visibleSubCategories = category
             ? subCategories.filter((option) => option.dataset.categoryId === category.dataset.categoryId)
             : [];
