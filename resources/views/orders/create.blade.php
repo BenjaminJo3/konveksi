@@ -112,4 +112,32 @@
             @include('orders.partials.item-fields', ['index' => '__INDEX__', 'item' => []])
         </tr>
     </template>
+    <script>
+        const poItemsForCategory = document.querySelector('#po-items');
+        if (poItemsForCategory) {
+            const enableCategoryFields = (event) => {
+                const category = event.target;
+                if (!(category instanceof HTMLInputElement) || !category.matches('[data-po-category]')) {
+                    return;
+                }
+
+                window.setTimeout(() => {
+                    const item = category.closest('[data-item]');
+                    if (!item) {
+                        return;
+                    }
+
+                    const enabled = category.value.trim() !== '';
+                    item.querySelectorAll('[data-po-requires-category]').forEach((input) => {
+                        input.disabled = !enabled;
+                        if (!enabled) {
+                            input.value = '';
+                        }
+                    });
+                });
+            };
+            poItemsForCategory.addEventListener('input', enableCategoryFields);
+            poItemsForCategory.addEventListener('change', enableCategoryFields);
+        }
+    </script>
 @endsection

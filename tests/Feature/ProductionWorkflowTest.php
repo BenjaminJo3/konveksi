@@ -853,6 +853,8 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('name="items[0][model]" value="" required disabled', false)
             ->assertSee('name="items[0][size]" value="" required disabled', false)
             ->assertSee('name="items[0][color]" value="" required disabled', false)
+            ->assertSee('data-po-requires-category', false)
+            ->assertSee("poItemsForCategory.addEventListener('input', enableCategoryFields)", false)
             ->assertSee('Otomatis');
     }
 
