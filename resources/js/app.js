@@ -7,7 +7,11 @@ import 'select2/dist/css/select2.min.css';
 window.$ = window.jQuery = $;
 select2(window, $);
 
-document.querySelectorAll('select[data-searchable-select]').forEach((select) => {
+const initializeSearchableSelect = (select) => {
+    if (!(select instanceof HTMLSelectElement)) {
+        return;
+    }
+
     const categoryFilter = select.dataset.categoryFilter
         ? document.querySelector(select.dataset.categoryFilter)
         : null;
@@ -32,7 +36,9 @@ document.querySelectorAll('select[data-searchable-select]').forEach((select) => 
     }
 
     $(select).select2(options);
-});
+};
+
+document.querySelectorAll('select[data-searchable-select]').forEach(initializeSearchableSelect);
 
 const notificationTrigger = document.querySelector('[data-notification-trigger]');
 if (notificationTrigger instanceof HTMLElement) {
@@ -476,12 +482,11 @@ document.querySelectorAll('[data-demo-email]').forEach((button) => {
 const poItems = document.querySelector('#po-items');
 const poItemTemplate = document.querySelector('#po-item-template');
 if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElement) {
-    const categoryList = document.querySelector('#po-categories');
     const subCategoryList = document.querySelector('#po-sub-categories');
     const modelList = document.querySelector('#po-models');
     const productList = document.querySelector('#po-products');
     const masterOptions = (list) => [...list.options].map((option) => option.cloneNode(true));
-    const categories = masterOptions(categoryList);
+    const categories = masterOptions(poItems.querySelector('[data-po-category]'));
     const subCategories = masterOptions(subCategoryList);
     const models = masterOptions(modelList);
     const products = masterOptions(productList);
@@ -552,6 +557,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
             input.name = input.name.replaceAll('__INDEX__', String(index));
         });
         poItems.append(fragment);
+        initializeSearchableSelect(poItems.lastElementChild.querySelector('[data-po-category]'));
         updateMasterSuggestions(poItems.lastElementChild);
         updateItems();
     });
@@ -565,7 +571,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
     });
     poItems.addEventListener('change', (event) => {
         const input = event.target;
-        if (!(input instanceof HTMLInputElement)) {
+        if (!(input instanceof HTMLInputElement || input instanceof HTMLSelectElement)) {
             return;
         }
 

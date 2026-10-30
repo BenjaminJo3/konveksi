@@ -13,9 +13,6 @@
 
     <form method="POST" action="{{ route('orders.store') }}" class="space-y-5">
         @csrf
-        <datalist id="po-categories">
-            @foreach ($masters['categories'] as $category)<option value="{{ $category->name }}" data-category-id="{{ $category->id }}">@endforeach
-        </datalist>
         <datalist id="po-sub-categories">
             @foreach ($masters['subCategories'] as $subCategory)<option value="{{ $subCategory->name }}" data-sub-category-id="{{ $subCategory->id }}" data-category-id="{{ $subCategory->category_id }}">@endforeach
         </datalist>
@@ -118,7 +115,8 @@
         (() => {
             const items = document.querySelector('#po-items');
             const sources = {
-                categories: [...document.querySelectorAll('#po-categories option')],
+                categories: [...items.querySelector('[data-po-category]').options]
+                    .filter((option) => option.value !== ''),
                 subCategories: [...document.querySelectorAll('#po-sub-categories option')],
                 models: [...document.querySelectorAll('#po-models option')],
                 products: [...document.querySelectorAll('#po-products option')],

@@ -873,11 +873,19 @@ class ProductionWorkflowTest extends TestCase
     public function test_purchase_order_form_supports_multiple_variant_rows_and_auto_numbering(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $categoryId = DB::table('master_categories')->insertGetId([
+            'code' => 'KTG-PO-CELANA',
+            'name' => 'Celana',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAs($mydent)
             ->get(route('orders.create'))
             ->assertOk()
             ->assertSee('Tambah varian')
+            ->assertSee('<select aria-label="Kategori" data-po-category data-searchable-select', false)
+            ->assertSee('value="Celana" data-category-id="'.$categoryId.'"', false)
             ->assertSee('items[0][category]', false)
             ->assertSee('Rasio yard/pcs')
             ->assertSee('table-fixed')
