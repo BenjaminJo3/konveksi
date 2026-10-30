@@ -19,9 +19,6 @@
         <datalist id="po-models">
             @foreach ($masters['models'] as $model)<option value="{{ $model->name }}" data-model-id="{{ $model->id }}" data-category-id="{{ $model->category_id }}" data-sub-category-id="{{ $model->sub_category_id }}">@endforeach
         </datalist>
-        <datalist id="po-colors">
-            @foreach ($masters['colors'] as $name)<option value="{{ $name }}">@endforeach
-        </datalist>
         <datalist id="po-fabrics">
             @foreach ($masters['fabrics'] as $name)<option value="{{ $name }}">@endforeach
         </datalist>
@@ -121,7 +118,6 @@
                 models: [...document.querySelectorAll('#po-models option')],
                 products: [...document.querySelectorAll('#po-products option')],
                 ratios: [...document.querySelectorAll('#po-ratios option')],
-                colors: [...document.querySelectorAll('#po-colors option')],
             };
             const normalize = (value) => value.trim().toLocaleLowerCase();
             let rowNumber = 0;
@@ -193,8 +189,6 @@
                 listFor(item, 'sub-categories', subCategoryInput, subCategories);
                 listFor(item, 'models', modelInput, models);
                 listFor(item, 'products', productInput, products);
-                listFor(item, 'colors', colorInput, distinct(products, 'color'));
-
                 const selectedSubCategory = sources.subCategories.find((option) =>
                     normalize(option.value) === normalize(subCategoryInput.value)
                     && option.dataset.categoryId === category?.dataset.categoryId);
