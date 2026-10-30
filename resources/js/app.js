@@ -1,5 +1,38 @@
 import './bootstrap';
 import JsBarcode from 'jsbarcode';
+import $ from 'jquery';
+import select2 from 'select2';
+import 'select2/dist/css/select2.min.css';
+
+window.$ = window.jQuery = $;
+select2(window, $);
+
+document.querySelectorAll('select[data-searchable-select]').forEach((select) => {
+    const categoryFilter = select.dataset.categoryFilter
+        ? document.querySelector(select.dataset.categoryFilter)
+        : null;
+    const options = {
+        width: '100%',
+        placeholder: select.dataset.placeholder,
+        language: {
+            noResults: () => 'Tidak ada hasil yang cocok',
+            searching: () => 'Mencari...',
+        },
+    };
+    if (categoryFilter instanceof HTMLSelectElement) {
+        options.matcher = (params, data) => {
+            if (data.id !== '' && data.element instanceof HTMLOptionElement
+                && data.element.dataset.category !== categoryFilter.value) {
+                return null;
+            }
+
+            const term = (params.term ?? '').trim().toLocaleLowerCase();
+            return !term || data.text.toLocaleLowerCase().includes(term) ? data : null;
+        };
+    }
+
+    $(select).select2(options);
+});
 
 const notificationTrigger = document.querySelector('[data-notification-trigger]');
 if (notificationTrigger instanceof HTMLElement) {
@@ -168,6 +201,14 @@ const productName = document.querySelector('#name');
 if (productCategory instanceof HTMLSelectElement
     && productSubCategory instanceof HTMLSelectElement) {
     const filterOptions = (select, predicate) => {
+        if (select.matches('select[data-category-filter]')) {
+            if (select.selectedOptions[0] && !predicate(select.selectedOptions[0])) {
+                select.value = '';
+                $(select).trigger('change.select2');
+            }
+            return;
+        }
+
         [...select.options].forEach((option, index) => {
             if (index === 0) {
                 return;
@@ -178,6 +219,7 @@ if (productCategory instanceof HTMLSelectElement
 
         if (select.selectedOptions[0]?.hidden) {
             select.value = '';
+            $(select).trigger('change.select2');
         }
     };
     const updateMasterOptions = () => {

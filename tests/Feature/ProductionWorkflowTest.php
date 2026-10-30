@@ -487,6 +487,10 @@ class ProductionWorkflowTest extends TestCase
             'name' => 'Kaos',
         ])->assertRedirect(route('master-data.index', 'sub-categories'));
         $subCategory = DB::table('master_sub_categories')->where('name', 'Kaos')->first();
+        $this->get(route('master-data.create', 'models'))
+            ->assertOk()
+            ->assertSee('id="category_id" name="category_id" data-searchable-select', false)
+            ->assertSee('id="sub_category_id" name="sub_category_id" data-searchable-select data-category-filter="#category_id"', false);
         $this->post(route('master-data.store', 'models'), [
             'category_id' => $category->id,
             'sub_category_id' => $subCategory->id,
@@ -518,6 +522,7 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('Rasio kain per pcs')
             ->assertSee('Tambah rasio')
             ->assertSee('Sub-kategori')
+            ->assertSee('data-searchable-select', false)
             ->assertSee('Ukuran');
         $this->post(route('master-data.ratios.store'), [
             'sub_category_id' => $subCategory->id,

@@ -17,7 +17,7 @@
             @csrf
             <div>
                 <label for="sub_category_id">Sub-kategori</label>
-                <select id="sub_category_id" name="sub_category_id" required>
+                <select id="sub_category_id" name="sub_category_id" data-searchable-select data-placeholder="Cari dan pilih sub-kategori" required>
                     <option value="">Pilih sub-kategori</option>
                     @foreach ($subCategories as $subCategory)
                         <option value="{{ $subCategory->id }}" @selected(old('sub_category_id') == $subCategory->id)>{{ $subCategory->category_name }} / {{ $subCategory->name }}</option>
