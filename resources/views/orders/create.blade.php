@@ -22,9 +22,6 @@
         <datalist id="po-models">
             @foreach ($masters['models'] as $model)<option value="{{ $model->name }}" data-model-id="{{ $model->id }}" data-category-id="{{ $model->category_id }}" data-sub-category-id="{{ $model->sub_category_id }}">@endforeach
         </datalist>
-        <datalist id="po-sizes">
-            @foreach ($masters['sizes'] as $name)<option value="{{ $name }}">@endforeach
-        </datalist>
         <datalist id="po-colors">
             @foreach ($masters['colors'] as $name)<option value="{{ $name }}">@endforeach
         </datalist>
@@ -126,7 +123,6 @@
                 models: [...document.querySelectorAll('#po-models option')],
                 products: [...document.querySelectorAll('#po-products option')],
                 ratios: [...document.querySelectorAll('#po-ratios option')],
-                sizes: [...document.querySelectorAll('#po-sizes option')],
                 colors: [...document.querySelectorAll('#po-colors option')],
             };
             const normalize = (value) => value.trim().toLocaleLowerCase();
@@ -199,7 +195,6 @@
                 listFor(item, 'sub-categories', subCategoryInput, subCategories);
                 listFor(item, 'models', modelInput, models);
                 listFor(item, 'products', productInput, products);
-                listFor(item, 'sizes', sizeInput, distinct(products, 'size'));
                 listFor(item, 'colors', colorInput, distinct(products, 'color'));
 
                 const selectedSubCategory = sources.subCategories.find((option) =>
@@ -229,7 +224,7 @@
 
                 downstreamFields.forEach((name) => {
                     const input = item.querySelector(`[name$="[${name}]"]`);
-                    if (input instanceof HTMLInputElement) {
+                    if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
                         input.value = '';
                     }
                 });
@@ -245,7 +240,7 @@
                 updateSuggestions(item);
             });
             items?.addEventListener('input', (event) => {
-                if (!(event.target instanceof HTMLInputElement)) {
+                if (!(event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement)) {
                     return;
                 }
 
@@ -261,7 +256,7 @@
             });
             items?.addEventListener('change', (event) => {
                 const input = event.target;
-                if (!(input instanceof HTMLInputElement)) {
+                if (!(input instanceof HTMLInputElement || input instanceof HTMLSelectElement)) {
                     return;
                 }
 
@@ -312,7 +307,7 @@
                 };
                 Object.entries(fields).forEach(([name, value]) => {
                     const target = item.querySelector(`[name$="[${name}]"]`);
-                    if (target instanceof HTMLInputElement && value) {
+                    if ((target instanceof HTMLInputElement || target instanceof HTMLSelectElement) && value) {
                         target.value = value;
                     }
                 });

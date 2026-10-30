@@ -602,7 +602,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
         };
         Object.entries(fields).forEach(([name, value]) => {
             const field = item.querySelector(`[name$="[${name}]"]`);
-            if (field instanceof HTMLInputElement && value) {
+            if ((field instanceof HTMLInputElement || field instanceof HTMLSelectElement) && value) {
                 field.value = value;
             }
         });
