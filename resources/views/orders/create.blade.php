@@ -31,6 +31,11 @@
         <datalist id="po-fabrics">
             @foreach ($masters['fabrics'] as $name)<option value="{{ $name }}">@endforeach
         </datalist>
+        <datalist id="po-ratios">
+            @foreach ($masters['ratios'] as $ratio)
+                <option value="{{ $ratio->ratio }}" data-sub-category-id="{{ $ratio->sub_category_id }}" data-size="{{ $ratio->size_name }}"></option>
+            @endforeach
+        </datalist>
         <datalist id="po-products">
             @foreach ($masters['products'] as $product)
                 <option value="{{ $product->name }}" label="{{ $product->code }} · {{ $product->category_name }} / {{ $product->sub_category_name }} / {{ $product->model_name }} / {{ $product->size_name }} / {{ $product->color_name }}" data-category="{{ $product->category_name }}" data-category-id="{{ $product->category_id }}" data-sub-category="{{ $product->sub_category_name }}" data-sub-category-id="{{ $product->sub_category_id }}" data-model="{{ $product->model_name }}" data-model-id="{{ $product->model_id }}" data-size="{{ $product->size_name }}" data-color="{{ $product->color_name }}" data-fabric="{{ $product->fabric_name }}"></option>
@@ -120,6 +125,7 @@
                 subCategories: [...document.querySelectorAll('#po-sub-categories option')],
                 models: [...document.querySelectorAll('#po-models option')],
                 products: [...document.querySelectorAll('#po-products option')],
+                ratios: [...document.querySelectorAll('#po-ratios option')],
                 sizes: [...document.querySelectorAll('#po-sizes option')],
                 colors: [...document.querySelectorAll('#po-colors option')],
             };
@@ -195,6 +201,17 @@
                 listFor(item, 'products', productInput, products);
                 listFor(item, 'sizes', sizeInput, distinct(products, 'size'));
                 listFor(item, 'colors', colorInput, distinct(products, 'color'));
+
+                const selectedSubCategory = sources.subCategories.find((option) =>
+                    normalize(option.value) === normalize(subCategoryInput.value)
+                    && option.dataset.categoryId === category?.dataset.categoryId);
+                const matchingRatio = sources.ratios.find((option) =>
+                    option.dataset.subCategoryId === selectedSubCategory?.dataset.subCategoryId
+                    && normalize(option.dataset.size) === normalize(sizeInput.value));
+                const ratioInput = field('ratio');
+                if (ratioInput instanceof HTMLInputElement) {
+                    ratioInput.value = matchingRatio?.value ?? '0.25';
+                }
             };
 
             const clearDependentFields = (item, input) => {

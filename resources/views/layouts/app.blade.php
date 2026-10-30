@@ -139,6 +139,7 @@
                             <div class="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-3">
                                 <a href="{{ route('master-data.products') }}" class="block rounded-lg px-3 py-2 text-xs font-semibold {{ request()->routeIs('master-data.products*') ? 'bg-emerald-50 text-emerald-800' : 'text-slate-500 hover:bg-slate-50' }}">Daftar Barang</a>
                                 <a href="{{ route('master-data.import') }}" class="block rounded-lg px-3 py-2 text-xs font-semibold {{ request()->routeIs('master-data.import*') ? 'bg-emerald-50 text-emerald-800' : 'text-slate-500 hover:bg-slate-50' }}">Upload Master Data</a>
+                                <a href="{{ route('master-data.ratios') }}" class="block rounded-lg px-3 py-2 text-xs font-semibold {{ request()->routeIs('master-data.ratios*') ? 'bg-emerald-50 text-emerald-800' : 'text-slate-500 hover:bg-slate-50' }}">Rasio</a>
                                 <a href="{{ route('master-data.index', 'units') }}" class="block rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50">Unit</a>
                                 <a href="{{ route('master-data.index', 'conversions') }}" class="block rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50">Konversi</a>
                                 <a href="{{ route('master-data.index', 'categories') }}" class="block rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50">Kategori</a>

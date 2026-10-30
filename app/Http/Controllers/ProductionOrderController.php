@@ -126,6 +126,15 @@ class ProductionOrderController extends Controller
                     ])
                     ->orderBy('products.name')
                     ->get(),
+                'ratios' => DB::table('master_ratios')
+                    ->join('master_sizes', 'master_sizes.id', '=', 'master_ratios.size_id')
+                    ->orderBy('master_ratios.sub_category_id')
+                    ->orderBy('master_sizes.name')
+                    ->get([
+                        'master_ratios.sub_category_id',
+                        'master_sizes.name as size_name',
+                        'master_ratios.ratio',
+                    ]),
             ],
         ]);
     }

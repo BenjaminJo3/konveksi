@@ -513,6 +513,37 @@ class ProductionWorkflowTest extends TestCase
         $product = DB::table('master_products')->first();
         $this->assertMatchesRegularExpression('/^BRG-[A-F0-9]{6}$/', $product->code);
         $this->assertSame('Kaos Navy Raglan Premium M', $product->name);
+        $this->get(route('master-data.ratios'))
+            ->assertOk()
+            ->assertSee('Rasio kain per pcs')
+            ->assertSee('Tambah rasio')
+            ->assertSee('Sub-kategori')
+            ->assertSee('Ukuran');
+        $this->post(route('master-data.ratios.store'), [
+            'sub_category_id' => $subCategory->id,
+            'size_id' => $size->id,
+            'ratio' => '0.3750',
+        ])->assertRedirect(route('master-data.ratios'))
+            ->assertSessionHas('success');
+        $ratio = DB::table('master_ratios')->first();
+        $this->assertNotNull($ratio);
+        $this->assertDatabaseHas('master_ratios', [
+            'sub_category_id' => $subCategory->id,
+            'size_id' => $size->id,
+            'ratio' => '0.3750',
+        ]);
+        $this->post(route('master-data.ratios.update', $ratio->id), [
+            'ratio' => '0.5000',
+        ])->assertRedirect(route('master-data.ratios'))
+            ->assertSessionHas('success');
+        $this->assertDatabaseHas('master_ratios', [
+            'id' => $ratio->id,
+            'ratio' => '0.5000',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'master_ratio_updated',
+            'subject_id' => (string) $ratio->id,
+        ]);
         $this->actingAs($admin)
             ->get(route('master-data.products', ['view' => 'grid']))
             ->assertOk()
@@ -962,6 +993,13 @@ class ProductionWorkflowTest extends TestCase
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+        DB::table('master_ratios')->insert([
+            'sub_category_id' => $subCategoryId,
+            'size_id' => $sizeId,
+            'ratio' => '0.3750',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         $this->actingAs(User::factory()->create(['role' => 'mydent']))
             ->get(route('orders.create'))
@@ -980,7 +1018,11 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('data-model="Raglan"', false)
             ->assertSee('data-size="M"', false)
             ->assertSee('data-color="Navy"', false)
-            ->assertSee('data-fabric="Cotton combed"', false);
+            ->assertSee('data-fabric="Cotton combed"', false)
+            ->assertSee('<datalist id="po-ratios">', false)
+            ->assertSee('data-sub-category-id="'.$subCategoryId.'" data-size="M"', false)
+            ->assertSee('value="0.375"', false)
+            ->assertSee('matchingRatio?.value ?? \'0.25\'', false);
     }
 
     public function test_purchase_order_grid_can_download_one_pdf_for_all_variants(): void

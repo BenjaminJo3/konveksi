@@ -61,6 +61,107 @@ class ProductMasterController extends Controller
         ]);
     }
 
+    public function ratios(Request $request): View
+    {
+        $query = DB::table('master_ratios as ratios')
+            ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'ratios.sub_category_id')
+            ->join('master_categories as categories', 'categories.id', '=', 'sub_categories.category_id')
+            ->join('master_sizes as sizes', 'sizes.id', '=', 'ratios.size_id')
+            ->select([
+                'ratios.id',
+                'ratios.ratio',
+                'categories.name as category_name',
+                'sub_categories.name as sub_category_name',
+                'sub_categories.id as sub_category_id',
+                'sizes.name as size_name',
+            ])
+            ->orderBy('categories.name')
+            ->orderBy('sub_categories.name')
+            ->orderBy('sizes.name');
+
+        if ($search = $request->string('q')->trim()->toString()) {
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('categories.name', 'like', "%{$search}%")
+                    ->orWhere('sub_categories.name', 'like', "%{$search}%")
+                    ->orWhere('sizes.name', 'like', "%{$search}%");
+            });
+        }
+
+        return view('master-data.ratios', [
+            'ratios' => $query->paginate(20)->withQueryString(),
+            'subCategories' => DB::table('master_sub_categories as sub_categories')
+                ->join('master_categories as categories', 'categories.id', '=', 'sub_categories.category_id')
+                ->orderBy('categories.name')
+                ->orderBy('sub_categories.name')
+                ->get([
+                    'sub_categories.id',
+                    'sub_categories.name',
+                    'categories.name as category_name',
+                ]),
+            'sizes' => DB::table('master_sizes')->orderBy('name')->get(['id', 'name']),
+            'search' => $request->string('q')->toString(),
+        ]);
+    }
+
+    public function storeRatio(Request $request): RedirectResponse
+    {
+        $values = $request->validate([
+            'sub_category_id' => ['required', 'integer', 'exists:master_sub_categories,id'],
+            'size_id' => [
+                'required',
+                'integer',
+                'exists:master_sizes,id',
+                Rule::unique('master_ratios', 'size_id')->where('sub_category_id', $request->integer('sub_category_id')),
+            ],
+            'ratio' => ['required', 'numeric', 'gt:0', 'max:1000000'],
+        ]);
+
+        $ratioId = DB::table('master_ratios')->insertGetId($values + [
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->logRatioChange($request, $ratioId, $values, 'master_ratio_created', 'ditambahkan');
+
+        return redirect()->route('master-data.ratios')->with('success', 'Rasio sub-kategori dan ukuran berhasil ditambahkan.');
+    }
+
+    public function updateRatio(Request $request, int $ratioId): RedirectResponse
+    {
+        $ratio = DB::table('master_ratios')->where('id', $ratioId)->first();
+        abort_if($ratio === null, 404);
+
+        $values = $request->validate([
+            'ratio' => ['required', 'numeric', 'gt:0', 'max:1000000'],
+        ]);
+        DB::table('master_ratios')->where('id', $ratioId)->update([
+            'ratio' => $values['ratio'],
+            'updated_at' => now(),
+        ]);
+        $this->logRatioChange($request, $ratioId, [
+            'sub_category_id' => $ratio->sub_category_id,
+            'size_id' => $ratio->size_id,
+            'ratio' => $values['ratio'],
+        ], 'master_ratio_updated', 'diperbarui');
+
+        return redirect()->route('master-data.ratios')->with('success', 'Rasio sub-kategori dan ukuran berhasil diperbarui.');
+    }
+
+    private function logRatioChange(Request $request, int $ratioId, array $values, string $event, string $action): void
+    {
+        $subCategoryName = DB::table('master_sub_categories')->where('id', $values['sub_category_id'])->value('name');
+        $sizeName = DB::table('master_sizes')->where('id', $values['size_id'])->value('name');
+        AuditLog::query()->create([
+            'user_id' => $request->user()->id,
+            'event' => $event,
+            'subject_type' => 'master_ratio',
+            'subject_id' => (string) $ratioId,
+            'description' => 'Rasio '.$subCategoryName.' / '.$sizeName.' '.$action.' menjadi '.$values['ratio'].' yard/pcs.',
+            'metadata' => $values,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+    }
+
     public function barcodes(Request $request): View
     {
         $query = DB::table('master_products as products')

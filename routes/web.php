@@ -95,6 +95,9 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/products', [ProductMasterController::class, 'products'])->name('products');
         Route::get('/products/create', [ProductMasterController::class, 'createProduct'])->name('products.create');
         Route::post('/products', [ProductMasterController::class, 'storeProduct'])->name('products.store');
+        Route::get('/ratios', [ProductMasterController::class, 'ratios'])->name('ratios');
+        Route::post('/ratios', [ProductMasterController::class, 'storeRatio'])->name('ratios.store');
+        Route::post('/ratios/{ratioId}', [ProductMasterController::class, 'updateRatio'])->name('ratios.update');
         Route::get('/{type}/create', [ProductMasterController::class, 'create'])->name('create');
         Route::post('/{type}', [ProductMasterController::class, 'store'])->name('store');
         Route::get('/{type}', [ProductMasterController::class, 'index'])->name('index');
