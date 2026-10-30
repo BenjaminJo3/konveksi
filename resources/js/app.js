@@ -36,6 +36,11 @@ const initializeSearchableSelect = (select) => {
     }
 
     $(select).select2(options);
+    if (select.matches('[data-po-category]')) {
+        $(select).on('select2:select', () => {
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
 };
 
 document.querySelectorAll('select[data-searchable-select]').forEach(initializeSearchableSelect);
