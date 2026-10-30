@@ -36,7 +36,12 @@ const initializeSearchableSelect = (select) => {
     }
 
     $(select).select2(options);
-    if (select.matches('[data-po-category]')) {
+    if (select.matches('.po-grid-searchable')) {
+        $(select).on('select2:open', () => {
+            document.querySelector('.select2-container--open .select2-dropdown')?.classList.add('po-grid-dropdown');
+        });
+    }
+    if (select.matches('[data-po-category], [data-po-size]')) {
         $(select).on('select2:select', () => {
             select.dispatchEvent(new Event('change', { bubbles: true }));
         });
@@ -562,7 +567,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
             input.name = input.name.replaceAll('__INDEX__', String(index));
         });
         poItems.append(fragment);
-        initializeSearchableSelect(poItems.lastElementChild.querySelector('[data-po-category]'));
+        poItems.lastElementChild.querySelectorAll('select[data-searchable-select]').forEach(initializeSearchableSelect);
         updateMasterSuggestions(poItems.lastElementChild);
         updateItems();
     });
