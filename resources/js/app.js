@@ -36,12 +36,12 @@ const initializeSearchableSelect = (select) => {
     }
 
     $(select).select2(options);
-    if (select.matches('.po-grid-searchable')) {
+    if (select.matches('.po-grid-searchable, [data-large-dropdown]')) {
         $(select).on('select2:open', () => {
             document.querySelector('.select2-container--open .select2-dropdown')?.classList.add('po-grid-dropdown');
         });
     }
-    if (select.matches('[data-po-category], [data-po-size]')) {
+    if (select.matches('[data-po-category], [data-po-size], [data-dispatch-change]')) {
         $(select).on('select2:select', () => {
             select.dispatchEvent(new Event('change', { bubbles: true }));
         });
