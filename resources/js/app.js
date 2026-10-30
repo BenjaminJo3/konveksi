@@ -554,7 +554,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
             const ratio = Number(card.querySelector('[name$="[ratio]"]').value);
             const result = card.querySelector('[data-ratio-result]');
             result.textContent = yard > 0 && ratio > 0
-                ? `${(yard / ratio).toLocaleString('id-ID', { maximumFractionDigits: 8 })} pcs`
+                ? `${(yard / ratio).toLocaleString('id-ID', { maximumFractionDigits: 2 })} pcs`
                 : '— pcs';
         });
     };
