@@ -489,7 +489,8 @@ class ProductionWorkflowTest extends TestCase
         $subCategory = DB::table('master_sub_categories')->where('name', 'Kaos')->first();
         $this->get(route('master-data.products.create'))
             ->assertOk()
-            ->assertSee('id="category_id" name="category_id" data-searchable-select data-large-dropdown data-dispatch-change', false);
+            ->assertSee('id="category_id" name="category_id" data-searchable-select data-large-dropdown data-dispatch-change', false)
+            ->assertSee('id="color_id" name="color_id" data-searchable-select data-large-dropdown data-dispatch-change', false);
         $this->get(route('master-data.create', 'models'))
             ->assertOk()
             ->assertSee('id="category_id" name="category_id" data-searchable-select', false)
