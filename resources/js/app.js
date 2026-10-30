@@ -41,7 +41,7 @@ const initializeSearchableSelect = (select) => {
             document.querySelector('.select2-container--open .select2-dropdown')?.classList.add('po-grid-dropdown');
         });
     }
-    if (select.matches('[data-po-category], [data-po-size], [data-dispatch-change]')) {
+    if (select.matches('[data-po-category], [data-po-size], [data-po-color], [data-dispatch-change]')) {
         $(select).on('select2:select', () => {
             select.dispatchEvent(new Event('change', { bubbles: true }));
         });
@@ -620,6 +620,9 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
             const field = item.querySelector(`[name$="[${name}]"]`);
             if ((field instanceof HTMLInputElement || field instanceof HTMLSelectElement) && value) {
                 field.value = value;
+                if (field instanceof HTMLSelectElement && field.matches('[data-searchable-select]')) {
+                    $(field).trigger('change.select2');
+                }
             }
         });
         updateMasterSuggestions(item);

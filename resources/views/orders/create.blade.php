@@ -218,6 +218,9 @@
                     const input = item.querySelector(`[name$="[${name}]"]`);
                     if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
                         input.value = '';
+                        if (input instanceof HTMLSelectElement) {
+                            window.jQuery?.(input).trigger('change.select2');
+                        }
                     }
                 });
             };
@@ -301,6 +304,9 @@
                     const target = item.querySelector(`[name$="[${name}]"]`);
                     if ((target instanceof HTMLInputElement || target instanceof HTMLSelectElement) && value) {
                         target.value = value;
+                        if (target instanceof HTMLSelectElement && target.matches('[data-searchable-select]')) {
+                            window.jQuery?.(target).trigger('change.select2');
+                        }
                     }
                 });
                 updateSuggestions(item);
