@@ -53,7 +53,7 @@
                                     <span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</span>
                                 </div>
                                 <div class="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                                    @foreach ([$product->sub_category_name, $product->model_name, 'Size '.$product->size_name, $product->color_name] as $tag)<span class="rounded-lg bg-slate-100 px-2 py-1 text-slate-600">{{ $tag }}</span>@endforeach
+                                    @foreach (array_filter([$product->sub_category_name, $product->model_name, 'Size '.$product->size_name, $product->color_name]) as $tag)<span class="rounded-lg bg-slate-100 px-2 py-1 text-slate-600">{{ $tag }}</span>@endforeach
                                 </div>
                                 <p class="mt-3 text-[11px] text-slate-500">{{ $product->fabric_name ?: 'Jenis kain belum ditentukan' }} <span class="mx-1">·</span> Unit {{ $product->unit_symbol }}</p>
                             </article>
@@ -73,7 +73,7 @@
                                 <td data-label="Kode" class="px-4 py-3 font-mono text-xs font-semibold text-emerald-800">{{ $product->code }}</td>
                                 <td data-label="Barang" class="px-4 py-3"><p class="font-semibold text-slate-800">{{ $product->name }}</p><p class="text-[11px] text-slate-400">{{ $product->sub_category_name }}</p></td>
                                 <td data-label="Kategori" class="px-4 py-3 text-slate-600">{{ $product->category_name }}</td>
-                                <td data-label="Model" class="px-4 py-3 text-slate-600">{{ $product->model_name }}</td>
+                                <td data-label="Model" class="px-4 py-3 text-slate-600">{{ $product->model_name ?: '—' }}</td>
                                 <td data-label="Ukuran / Warna" class="px-4 py-3 text-slate-600">{{ $product->size_name }} / {{ $product->color_name }}</td>
                                 <td data-label="Kain / Unit" class="px-4 py-3 text-slate-600">{{ $product->fabric_name ?: '—' }} / {{ $product->unit_symbol }}</td>
                                 <td data-label="Status" class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-semibold {{ $product->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</span></td>

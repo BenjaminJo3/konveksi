@@ -213,6 +213,7 @@ const productSubCategory = document.querySelector('#sub_category_id');
 const productModel = document.querySelector('#model_id');
 const productSize = document.querySelector('#size_id');
 const productColor = document.querySelector('#color_id');
+const productFabric = document.querySelector('#fabric_name');
 const productName = document.querySelector('#name');
 if (productCategory instanceof HTMLSelectElement
     && productSubCategory instanceof HTMLSelectElement) {
@@ -249,15 +250,15 @@ if (productCategory instanceof HTMLSelectElement
             && productSize instanceof HTMLSelectElement
             && productColor instanceof HTMLSelectElement
             && productSubCategory.value
-            && productModel.value
             && productSize.value
             && productColor.value) {
             productName.value = [
                 productSubCategory.selectedOptions[0].textContent.trim(),
                 productColor.selectedOptions[0].textContent.trim(),
-                productModel.selectedOptions[0].textContent.trim(),
+                productModel.value ? productModel.selectedOptions[0].textContent.trim() : '',
+                productFabric instanceof HTMLInputElement ? productFabric.value.trim() : '',
                 productSize.selectedOptions[0].textContent.trim(),
-            ].join(' ');
+            ].filter(Boolean).join(' ');
         } else if (productName instanceof HTMLInputElement) {
             productName.value = '';
         }
@@ -268,6 +269,7 @@ if (productCategory instanceof HTMLSelectElement
     productModel?.addEventListener('change', updateMasterOptions);
     productSize?.addEventListener('change', updateMasterOptions);
     productColor?.addEventListener('change', updateMasterOptions);
+    productFabric?.addEventListener('input', updateMasterOptions);
     updateMasterOptions();
 }
 

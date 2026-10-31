@@ -29,7 +29,7 @@
         </datalist>
         <datalist id="po-products">
             @foreach ($masters['products'] as $product)
-                <option value="{{ $product->name }}" label="{{ $product->code }} · {{ $product->category_name }} / {{ $product->sub_category_name }} / {{ $product->model_name }} / {{ $product->size_name }} / {{ $product->color_name }}" data-category="{{ $product->category_name }}" data-category-id="{{ $product->category_id }}" data-sub-category="{{ $product->sub_category_name }}" data-sub-category-id="{{ $product->sub_category_id }}" data-model="{{ $product->model_name }}" data-model-id="{{ $product->model_id }}" data-size="{{ $product->size_name }}" data-color="{{ $product->color_name }}" data-fabric="{{ $product->fabric_name }}"></option>
+                <option value="{{ $product->name }}" label="{{ $product->code }} · {{ $product->category_name }} / {{ $product->sub_category_name }} / {{ $product->model_name ?: 'Tanpa model' }} / {{ $product->size_name }} / {{ $product->color_name }}" data-category="{{ $product->category_name }}" data-category-id="{{ $product->category_id }}" data-sub-category="{{ $product->sub_category_name }}" data-sub-category-id="{{ $product->sub_category_id }}" data-model="{{ $product->model_name }}" data-model-id="{{ $product->model_id }}" data-size="{{ $product->size_name }}" data-color="{{ $product->color_name }}" data-fabric="{{ $product->fabric_name }}"></option>
             @endforeach
         </datalist>
         <section class="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-7">

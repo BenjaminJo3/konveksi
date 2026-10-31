@@ -29,7 +29,7 @@ class ProductMasterController extends Controller
         $query = DB::table('master_products as products')
             ->join('master_categories as categories', 'categories.id', '=', 'products.category_id')
             ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'products.sub_category_id')
-            ->join('master_models as models', 'models.id', '=', 'products.model_id')
+            ->leftJoin('master_models as models', 'models.id', '=', 'products.model_id')
             ->join('master_sizes as sizes', 'sizes.id', '=', 'products.size_id')
             ->join('master_colors as colors', 'colors.id', '=', 'products.color_id')
             ->join('master_units as units', 'units.id', '=', 'products.unit_id')
@@ -167,7 +167,7 @@ class ProductMasterController extends Controller
         $query = DB::table('master_products as products')
             ->join('master_categories as categories', 'categories.id', '=', 'products.category_id')
             ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'products.sub_category_id')
-            ->join('master_models as models', 'models.id', '=', 'products.model_id')
+            ->leftJoin('master_models as models', 'models.id', '=', 'products.model_id')
             ->join('master_sizes as sizes', 'sizes.id', '=', 'products.size_id')
             ->join('master_colors as colors', 'colors.id', '=', 'products.color_id')
             ->where('products.is_active', true)
@@ -216,19 +216,24 @@ class ProductMasterController extends Controller
         $values = $request->validate([
             'category_id' => ['required', 'integer', 'exists:master_categories,id'],
             'sub_category_id' => ['required', 'integer', 'exists:master_sub_categories,id'],
-            'model_id' => ['required', 'integer', 'exists:master_models,id'],
+            'model_id' => ['nullable', 'integer', 'exists:master_models,id'],
             'size_id' => ['required', 'integer', 'exists:master_sizes,id'],
             'color_id' => ['required', 'integer', 'exists:master_colors,id'],
             'unit_id' => ['required', 'integer', 'exists:master_units,id'],
             'fabric_name' => ['nullable', 'string', 'max:120'],
         ]);
 
+        $values['model_id'] = $values['model_id'] ?? null;
         $this->assertProductHierarchy($values);
+        $modelName = $values['model_id'] === null
+            ? null
+            : DB::table('master_models')->where('id', $values['model_id'])->value('name');
         $values['name'] = $productName->make(
             DB::table('master_sub_categories')->where('id', $values['sub_category_id'])->value('name'),
             DB::table('master_colors')->where('id', $values['color_id'])->value('name'),
-            DB::table('master_models')->where('id', $values['model_id'])->value('name'),
+            $modelName,
             DB::table('master_sizes')->where('id', $values['size_id'])->value('name'),
+            $values['fabric_name'] ?? null,
         );
         $values['code'] = app(MasterDataCodeGenerator::class)->generate('BRG', 'master_products');
         DB::table('master_products')->insert($values + [
@@ -410,11 +415,12 @@ class ProductMasterController extends Controller
             ->where('id', $values['sub_category_id'])
             ->where('category_id', $values['category_id'])
             ->exists();
-        $modelMatches = DB::table('master_models')
-            ->where('id', $values['model_id'])
-            ->where('category_id', $values['category_id'])
-            ->where('sub_category_id', $values['sub_category_id'])
-            ->exists();
+        $modelMatches = $values['model_id'] === null
+            || DB::table('master_models')
+                ->where('id', $values['model_id'])
+                ->where('category_id', $values['category_id'])
+                ->where('sub_category_id', $values['sub_category_id'])
+                ->exists();
 
         if (! $subCategoryMatches || ! $modelMatches) {
             throw ValidationException::withMessages([

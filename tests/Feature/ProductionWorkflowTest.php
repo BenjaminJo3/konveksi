@@ -489,8 +489,9 @@ class ProductionWorkflowTest extends TestCase
         $subCategory = DB::table('master_sub_categories')->where('name', 'Kaos')->first();
         $this->get(route('master-data.products.create'))
             ->assertOk()
-            ->assertSee('(wajib diisi)')
-            ->assertSee('id="model_id" name="model_id" required', false)
+            ->assertSee('Model / Artikel (opsional)')
+            ->assertSee('id="model_id" name="model_id"', false)
+            ->assertDontSee('id="model_id" name="model_id" required', false)
             ->assertSee('id="category_id" name="category_id" data-searchable-select data-large-dropdown data-dispatch-change', false)
             ->assertSee('id="color_id" name="color_id" data-searchable-select data-large-dropdown data-dispatch-change', false);
         $this->get(route('master-data.create', 'models'))
@@ -510,14 +511,6 @@ class ProductionWorkflowTest extends TestCase
         $color = DB::table('master_colors')->where('name', 'Navy')->first();
 
         $this->post(route('master-data.products.store'), [
-            'category_id' => $category->id,
-            'sub_category_id' => $subCategory->id,
-            'size_id' => $size->id,
-            'color_id' => $color->id,
-            'unit_id' => $unit->id,
-        ])->assertSessionHasErrors('model_id');
-
-        $this->post(route('master-data.products.store'), [
             'name' => 'Kaos Raglan Premium',
             'category_id' => $category->id,
             'sub_category_id' => $subCategory->id,
@@ -528,10 +521,22 @@ class ProductionWorkflowTest extends TestCase
             'fabric_name' => 'Cotton combed 24s',
         ])->assertRedirect(route('master-data.products'));
 
-        $product = DB::table('master_products')->first();
+        $product = DB::table('master_products')->where('model_id', $model->id)->first();
         $this->assertMatchesRegularExpression('/^BRG-[A-F0-9]{6}$/', $product->code);
-        $this->assertSame('Kaos Navy Raglan Premium M', $product->name);
+        $this->assertSame('Kaos Navy Raglan Premium Cotton combed 24s M', $product->name);
         $this->assertSame($model->id, $product->model_id);
+
+        $this->post(route('master-data.products.store'), [
+            'category_id' => $category->id,
+            'sub_category_id' => $subCategory->id,
+            'size_id' => $size->id,
+            'color_id' => $color->id,
+            'unit_id' => $unit->id,
+            'fabric_name' => 'CHINOS',
+        ])->assertRedirect(route('master-data.products'));
+        $modelOptionalProduct = DB::table('master_products')->whereNull('model_id')->first();
+        $this->assertNotNull($modelOptionalProduct);
+        $this->assertSame('Kaos Navy CHINOS M', $modelOptionalProduct->name);
         $this->get(route('master-data.ratios'))
             ->assertOk()
             ->assertSee('Rasio kain per pcs')
@@ -567,12 +572,14 @@ class ProductionWorkflowTest extends TestCase
         $this->actingAs($admin)
             ->get(route('master-data.products', ['view' => 'grid']))
             ->assertOk()
-            ->assertSee('Kaos Navy Raglan Premium M')
+            ->assertSee($product->name)
+            ->assertSee($modelOptionalProduct->name)
             ->assertSee($product->code)
             ->assertSee('master-products-grid');
         $this->get(route('master-data.products', ['view' => 'kanban']))
             ->assertOk()
-            ->assertSee('Kaos Navy Raglan Premium M')
+            ->assertSee($product->name)
+            ->assertSee($modelOptionalProduct->name)
             ->assertSee('Raglan Premium');
         $this->get(route('barcodes.index', ['q' => $product->code]))
             ->assertOk()
@@ -580,6 +587,10 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee($product->code)
             ->assertSee('Ketik kode barang atau nama')
             ->assertSee('paper-width');
+        $this->get(route('barcodes.index', ['q' => $modelOptionalProduct->code]))
+            ->assertOk()
+            ->assertSee($modelOptionalProduct->code)
+            ->assertSee('Tanpa model');
 
         $this->actingAs(User::factory()->create(['role' => 'warehouse']))
             ->get(route('master-data.products'))
@@ -915,7 +926,7 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('po-grid-searchable po-size-select', false)
             ->assertSee('name="items[0][size]" required disabled', false)
             ->assertSee('<option value="">Pilih ukuran</option>', false)
-            ->assertSee("name=\"items[0][size]\"", false)
+            ->assertSee('name="items[0][size]"', false)
             ->assertSee('<select aria-label="Warna" data-po-color data-searchable-select data-placeholder="Pilih warna"', false)
             ->assertSee('po-grid-searchable po-color-select', false)
             ->assertSee('name="items[0][color]" required disabled', false)

@@ -107,7 +107,7 @@ class ProductionOrderController extends Controller
                 'products' => DB::table('master_products as products')
                     ->join('master_categories as categories', 'categories.id', '=', 'products.category_id')
                     ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'products.sub_category_id')
-                    ->join('master_models as models', 'models.id', '=', 'products.model_id')
+                    ->leftJoin('master_models as models', 'models.id', '=', 'products.model_id')
                     ->join('master_sizes as sizes', 'sizes.id', '=', 'products.size_id')
                     ->join('master_colors as colors', 'colors.id', '=', 'products.color_id')
                     ->where('products.is_active', true)

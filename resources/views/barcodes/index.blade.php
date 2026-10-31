@@ -42,10 +42,10 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-xs font-bold text-slate-800">{{ $product->name }}</p>
                                     <p class="mt-1 truncate font-mono text-[10px] text-emerald-700">{{ $product->code }}</p>
-                                    <p class="mt-1 truncate text-[10px] text-slate-400">{{ $product->category_name }} · {{ $product->model_name }} · {{ $product->size_name }}/{{ $product->color_name }}</p>
+                                    <p class="mt-1 truncate text-[10px] text-slate-400">{{ $product->category_name }} · {{ $product->model_name ?: 'Tanpa model' }} · {{ $product->size_name }}/{{ $product->color_name }}</p>
                                 </div>
                                 <label class="mb-0 w-16 shrink-0 text-[9px]">Jumlah<input type="number" min="1" max="500" value="1" aria-label="Jumlah label {{ $product->code }}" class="!mt-1 !px-2 !py-1.5"></label>
-                                <button type="button" data-add-barcode data-code="{{ $product->code }}" data-name="{{ $product->name }}" data-variant="{{ $product->model_name }} · {{ $product->size_name }} / {{ $product->color_name }}" class="shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">Tambah</button>
+                                <button type="button" data-add-barcode data-code="{{ $product->code }}" data-name="{{ $product->name }}" data-variant="{{ $product->model_name ?: 'Tanpa model' }} · {{ $product->size_name }} / {{ $product->color_name }}" class="shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">Tambah</button>
                             </article>
                         @endforeach
                     </div>
