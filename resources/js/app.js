@@ -635,6 +635,7 @@ if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElem
         });
         updateMasterSuggestions(item);
     });
+    poItems.addEventListener('change', updateItems);
     poItems.addEventListener('input', (event) => {
         const input = event.target;
         if (input instanceof HTMLInputElement && input.matches('[data-po-category], [data-po-sub-category], [name$="[model]"]')) {

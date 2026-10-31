@@ -125,7 +125,6 @@
             const items = document.querySelector('#po-items');
             const form = items.closest('form');
             const draftKey = form.dataset.draftKey;
-            let draftRestored = false;
             let draft = null;
             if (draftKey && form.dataset.validationErrors !== 'true') {
                 try {
@@ -159,7 +158,14 @@
                         input.value = value;
                     }
                 });
-                draftRestored = true;
+                if (Array.isArray(draft.ratioOverrides)) {
+                    draft.ratioOverrides.forEach((name) => {
+                        const input = form.elements.namedItem(name);
+                        if (input instanceof HTMLInputElement) {
+                            input.dataset.manualRatio = 'true';
+                        }
+                    });
+                }
             }
 
             const sources = {
@@ -186,7 +192,7 @@
                 input.setAttribute('list', listId);
             };
 
-            const updateSuggestions = (item) => {
+            const updateSuggestions = (item, syncRatio = false) => {
                 if (!item.dataset.masterFilterId) {
                     item.dataset.masterFilterId = String(++rowNumber);
                 }
@@ -247,7 +253,7 @@
                     option.dataset.subCategoryId === selectedSubCategory?.dataset.subCategoryId
                     && normalize(option.dataset.size) === normalize(sizeInput.value));
                 const ratioInput = field('ratio');
-                if (ratioInput instanceof HTMLInputElement && !draftRestored) {
+                if (ratioInput instanceof HTMLInputElement && syncRatio && !ratioInput.dataset.manualRatio) {
                     ratioInput.value = matchingRatio?.value ?? '0.25';
                 }
             };
@@ -283,7 +289,7 @@
                 if (!category) {
                     clearDependentFields(item, categoryInput);
                 }
-                updateSuggestions(item);
+                updateSuggestions(item, true);
             });
             items?.addEventListener('input', (event) => {
                 if (!(event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement)) {
@@ -295,9 +301,18 @@
                     return;
                 }
 
+                if (event.target.matches('[name$="[ratio]"]')) {
+                    event.target.dataset.manualRatio = 'true';
+                    return;
+                }
+
                 if (event.target.matches('[data-po-category], [data-po-sub-category], [data-po-product], [name$="[model]"], [name$="[size]"], [name$="[color]"]')) {
                     clearDependentFields(item, event.target);
-                    updateSuggestions(item);
+                    const syncRatio = event.target.matches('[data-po-category], [data-po-sub-category], [name$="[size]"]');
+                    if (syncRatio) {
+                        item.querySelector('[name$="[ratio]"]').dataset.manualRatio = '';
+                    }
+                    updateSuggestions(item, syncRatio);
                 }
             });
             items?.addEventListener('change', (event) => {
@@ -313,7 +328,8 @@
 
                 if (input.matches('[data-po-category]')) {
                     clearDependentFields(item, input);
-                    updateSuggestions(item);
+                    item.querySelector('[name$="[ratio]"]').dataset.manualRatio = '';
+                    updateSuggestions(item, true);
                     return;
                 }
 
@@ -321,7 +337,11 @@
                     if (input.matches('[data-po-sub-category], [name$="[model]"], [name$="[size]"], [name$="[color]"]')) {
                         clearDependentFields(item, input);
                     }
-                    updateSuggestions(item);
+                    const syncRatio = input.matches('[data-po-sub-category], [name$="[size]"]');
+                    if (syncRatio) {
+                        item.querySelector('[name$="[ratio]"]').dataset.manualRatio = '';
+                    }
+                    updateSuggestions(item, syncRatio);
                     return;
                 }
 
@@ -360,7 +380,8 @@
                         }
                     }
                 });
-                updateSuggestions(item);
+                item.querySelector('[name$="[ratio]"]').dataset.manualRatio = '';
+                updateSuggestions(item, true);
             });
 
             const saveDraft = () => {
@@ -376,7 +397,11 @@
                 });
 
                 try {
-                    sessionStorage.setItem(draftKey, JSON.stringify({ values }));
+                    sessionStorage.setItem(draftKey, JSON.stringify({
+                        values,
+                        ratioOverrides: [...form.querySelectorAll('[name$="[ratio]"][data-manual-ratio="true"]')]
+                            .map((input) => input.name),
+                    }));
                 } catch (error) {
                     console.error('Draft PO tidak dapat disimpan ke penyimpanan browser.', error);
                 }

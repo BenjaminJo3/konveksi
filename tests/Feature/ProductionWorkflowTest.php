@@ -1317,7 +1317,20 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('<datalist id="po-ratios">', false)
             ->assertSee('data-sub-category-id="'.$subCategoryId.'" data-size="M"', false)
             ->assertSee('value="0.375"', false)
-            ->assertSee('matchingRatio?.value ?? \'0.25\'', false);
+            ->assertSee('matchingRatio?.value ?? \'0.25\'', false)
+            ->assertSee('syncRatio = false', false)
+            ->assertSee('dataset.manualRatio', false)
+            ->assertSee('ratioOverrides: [...form.querySelectorAll', false);
+    }
+
+    public function test_purchase_order_form_restores_master_ratio_and_recalculates_estimate(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'mydent']))
+            ->get(route('orders.create'))
+            ->assertOk()
+            ->assertSee('updateSuggestions(item, true);', false)
+            ->assertSee('syncRatio && !ratioInput.dataset.manualRatio', false)
+            ->assertSee('ratioOverrides: [...form.querySelectorAll', false);
     }
 
     public function test_purchase_order_grid_can_download_one_pdf_for_all_variants(): void
