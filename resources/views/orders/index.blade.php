@@ -53,11 +53,6 @@
                                                 @method('DELETE')
                                                 <button type="submit" class="text-xs font-semibold text-rose-700 hover:text-rose-900">Hapus</button>
                                             </form>
-                                        @else
-                                            <div class="flex flex-col items-start gap-1">
-                                                <button type="button" disabled title="Hanya PO Draft tanpa aktivitas yang dapat dihapus." class="cursor-not-allowed text-xs font-semibold text-slate-400">Hapus</button>
-                                                <span class="text-[10px] text-slate-400">PO sudah diproses</span>
-                                            </div>
                                         @endif
                                     </td>
                                 @endif
