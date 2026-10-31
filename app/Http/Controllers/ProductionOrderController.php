@@ -328,6 +328,74 @@ class ProductionOrderController extends Controller
         return redirect()->route('orders.index')->with('success', "Purchase Order {$poNumber} berhasil dihapus.");
     }
 
+    public function cancelFabricRequest(Request $request, ProductionOrder $order): RedirectResponse
+    {
+        abort_unless($request->user()->canPermission('orders.create'), 403);
+        $poNumber = $order->po_number;
+
+        DB::transaction(function () use ($request, $poNumber): void {
+            $group = DB::table('production_order_groups')
+                ->where('po_number', $poNumber)
+                ->lockForUpdate()
+                ->first();
+            abort_if($group === null, 404);
+
+            $items = ProductionOrder::query()
+                ->where('po_number', $poNumber)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+            abort_if($items->isEmpty(), 404);
+
+            $ids = $items->pluck('id');
+            $entries = DB::table('workflow_entries')
+                ->whereIn('production_order_id', $ids)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+            $fabricRequests = $entries->where('action', 'request_fabric');
+
+            $hasUnsafeStatus = $items->contains(fn (ProductionOrder $item): bool => ! in_array($item->status, ['draft', 'fabric_requested'], true)
+                || ($item->status === 'fabric_requested'
+                    && ! $fabricRequests->contains('production_order_id', $item->id)));
+            $hasOtherActivity = $entries->contains(fn (object $entry): bool => ! in_array($entry->action, ['po_created', 'request_fabric'], true));
+            $hasDeliveryOrder = DB::table('delivery_orders')->whereIn('production_order_id', $ids)->exists();
+
+            abort_if(
+                $fabricRequests->isEmpty() || $hasUnsafeStatus || $hasOtherActivity || $hasDeliveryOrder,
+                409,
+                'Permintaan kain hanya dapat dibatalkan jika belum ada DO atau aktivitas produksi lanjutan.'
+            );
+
+            DB::table('workflow_entries')
+                ->whereIn('production_order_id', $ids)
+                ->where('action', 'request_fabric')
+                ->delete();
+
+            ProductionOrder::query()
+                ->whereIn('id', $ids)
+                ->update(['status' => 'draft', 'updated_at' => now()]);
+
+            AuditLog::query()->create([
+                'user_id' => $request->user()->id,
+                'event' => 'fabric_request_cancelled',
+                'subject_type' => 'production_order_group',
+                'subject_id' => $poNumber,
+                'description' => 'Permintaan kain PO dibatalkan karena salah input; status dikembalikan ke Draft.',
+                'metadata' => [
+                    'cancelled_entry_ids' => $fabricRequests->pluck('id')->all(),
+                    'item_ids' => $ids->all(),
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        });
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'Permintaan kain dibatalkan. Status PO kembali ke Draft dan sekarang dapat dihapus.');
+    }
+
     private function validateOrderForm(Request $request): array
     {
         return $request->validate([
@@ -436,6 +504,29 @@ class ProductionOrderController extends Controller
             && ! DB::table('delivery_orders')->whereIn('production_order_id', $ids)->exists();
     }
 
+    private function canCancelFabricRequest(string $poNumber): bool
+    {
+        if (! auth()->user()->canPermission('orders.create')) {
+            return false;
+        }
+
+        $items = ProductionOrder::query()->where('po_number', $poNumber)->get();
+        if ($items->isEmpty()) {
+            return false;
+        }
+
+        $ids = $items->pluck('id');
+        $entries = DB::table('workflow_entries')->whereIn('production_order_id', $ids)->get();
+        $fabricRequests = $entries->where('action', 'request_fabric');
+
+        return $fabricRequests->isNotEmpty()
+            && ! $items->contains(fn (ProductionOrder $item): bool => ! in_array($item->status, ['draft', 'fabric_requested'], true)
+                || ($item->status === 'fabric_requested'
+                    && ! $fabricRequests->contains('production_order_id', $item->id)))
+            && ! $entries->contains(fn (object $entry): bool => ! in_array($entry->action, ['po_created', 'request_fabric'], true))
+            && ! DB::table('delivery_orders')->whereIn('production_order_id', $ids)->exists();
+    }
+
     private function formMasters(): array
     {
         return [
@@ -524,6 +615,7 @@ class ProductionOrderController extends Controller
                 ->get(),
             'timeline' => $entries,
             'canManagePo' => $this->canManagePurchaseOrder($order->po_number),
+            'canCancelFabricRequest' => $this->canCancelFabricRequest($order->po_number),
             'availableActions' => $this->availableActions($order),
             'summary' => [
                 'cut' => $order->quantityFor('cutting_report'),

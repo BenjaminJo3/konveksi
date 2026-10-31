@@ -90,6 +90,9 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/orders/{order}', [ProductionOrderController::class, 'destroy'])
         ->middleware('permission:orders.create')
         ->name('orders.destroy');
+    Route::post('/orders/{order}/cancel-fabric-request', [ProductionOrderController::class, 'cancelFabricRequest'])
+        ->middleware('permission:orders.create')
+        ->name('orders.cancel-fabric-request');
     Route::middleware('permission:orders.view')->group(function (): void {
         Route::get('/orders/{order}/pdf', [ProductionOrderController::class, 'pdf'])->name('orders.pdf');
         Route::get('/orders/{order}', [ProductionOrderController::class, 'show'])->name('orders.show');

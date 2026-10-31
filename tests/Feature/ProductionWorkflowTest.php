@@ -1029,6 +1029,87 @@ class ProductionWorkflowTest extends TestCase
         $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'draft']);
     }
 
+    public function test_mydent_can_cancel_an_accidental_fabric_request_before_later_activity(): void
+    {
+        $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->actingAs($mydent)->post(route('orders.store'), [
+            'po_number_mode' => 'manual',
+            'po_number' => 'MYD-CANCEL-FABRIC-001',
+            'po_date' => '2026-10-25',
+            'items' => [[
+                'category' => 'Pakaian',
+                'sub_category' => 'Kaos',
+                'product_name' => 'Kaos Raglan',
+                'color' => 'Navy',
+                'size' => 'S',
+                'yard_kg' => 25,
+                'ratio' => 0.25,
+            ]],
+        ])->assertRedirect();
+        $order = ProductionOrder::query()->where('po_number', 'MYD-CANCEL-FABRIC-001')->firstOrFail();
+        $this->postWorkflowAction($mydent, $order, 'request_fabric');
+
+        $this->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertSee('Koreksi status ke Draft');
+
+        $this->actingAs($mydent)
+            ->post(route('orders.cancel-fabric-request', $order))
+            ->assertRedirect(route('orders.show', $order))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'draft']);
+        $this->assertDatabaseMissing('workflow_entries', [
+            'production_order_id' => $order->id,
+            'action' => 'request_fabric',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'fabric_request_cancelled',
+            'subject_type' => 'production_order_group',
+            'subject_id' => 'MYD-CANCEL-FABRIC-001',
+        ]);
+
+        $this->get(route('orders.index'))
+            ->assertOk()
+            ->assertSee(route('orders.destroy', $order), false);
+    }
+
+    public function test_accidental_fabric_request_cannot_be_cancelled_after_later_activity(): void
+    {
+        $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->actingAs($mydent)->post(route('orders.store'), [
+            'po_number_mode' => 'manual',
+            'po_number' => 'MYD-CANCEL-FABRIC-BLOCKED',
+            'po_date' => '2026-10-25',
+            'items' => [[
+                'category' => 'Pakaian',
+                'sub_category' => 'Kaos',
+                'product_name' => 'Kaos Raglan',
+                'color' => 'Navy',
+                'size' => 'S',
+                'yard_kg' => 25,
+                'ratio' => 0.25,
+            ]],
+        ])->assertRedirect();
+        $order = ProductionOrder::query()->where('po_number', 'MYD-CANCEL-FABRIC-BLOCKED')->firstOrFail();
+        $this->postWorkflowAction($mydent, $order, 'request_fabric');
+        $warehouse = User::factory()->create(['role' => 'warehouse']);
+        $this->postWorkflowAction($warehouse, $order, 'deliver_fabric', [
+            'reference' => 'DO-FABRIC-001',
+            'quantity' => 25,
+        ]);
+
+        $this->actingAs($mydent)
+            ->post(route('orders.cancel-fabric-request', $order))
+            ->assertStatus(409);
+
+        $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'fabric_in_transit']);
+        $this->assertDatabaseHas('workflow_entries', [
+            'production_order_id' => $order->id,
+            'action' => 'request_fabric',
+        ]);
+    }
+
     public function test_purchase_order_can_be_saved_without_model_or_motif(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
