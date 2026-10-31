@@ -149,7 +149,7 @@ class ProductionOrderController extends Controller
             $numberMode = $manualPoNumber ? 'manual' : 'automatic';
         } else {
             $values = $this->validateOrderForm($request);
-            $items = $values['items'];
+            $items = $this->applyMasterRatios($values['items']);
             $poDate = $values['po_date'];
             $manualPoNumber = $values['po_number'] ?? null;
             $numberMode = $values['po_number_mode'];
@@ -222,7 +222,7 @@ class ProductionOrderController extends Controller
     {
         abort_unless($request->user()->canPermission('orders.create'), 403);
         $values = $this->validateOrderForm($request);
-        $items = $this->prepareOrderItems($values['items']);
+        $items = $this->prepareOrderItems($this->applyMasterRatios($values['items']));
         $poNumber = $order->po_number;
 
         $updatedOrder = DB::transaction(function () use ($request, $values, $items, $poNumber): ProductionOrder {
@@ -418,8 +418,33 @@ class ProductionOrderController extends Controller
             'items.*.fabric_name' => ['nullable', 'string', 'max:120'],
             'items.*.yard_kg' => ['required', 'numeric', 'gt:0', 'max:100000000'],
             'items.*.rib_qty' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
-            'items.*.ratio' => ['required', 'numeric', 'decimal:0,4', 'gt:0', 'max:100000000'],
+            'items.*.ratio' => ['nullable', 'numeric', 'decimal:0,4', 'gt:0', 'max:100000000'],
         ]);
+    }
+
+    private function applyMasterRatios(array $items): array
+    {
+        foreach ($items as $index => &$item) {
+            $masterRatio = DB::table('master_ratios')
+                ->join('master_sub_categories', 'master_sub_categories.id', '=', 'master_ratios.sub_category_id')
+                ->join('master_categories', 'master_categories.id', '=', 'master_sub_categories.category_id')
+                ->join('master_sizes', 'master_sizes.id', '=', 'master_ratios.size_id')
+                ->where('master_categories.name', $item['category'])
+                ->where('master_sub_categories.name', $item['sub_category'])
+                ->where('master_sizes.name', $item['size'])
+                ->value('master_ratios.ratio');
+
+            if ($masterRatio === null) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.ratio" => 'Rasio master untuk sub-kategori dan ukuran ini belum tersedia. Tambahkan rasio di Master Barang sebelum menyimpan PO.',
+                ]);
+            }
+
+            $item['ratio'] = (float) $masterRatio;
+        }
+        unset($item);
+
+        return $items;
     }
 
     private function prepareOrderItems(array $items): array

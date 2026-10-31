@@ -844,6 +844,8 @@ class ProductionWorkflowTest extends TestCase
     public function test_mydent_can_create_one_purchase_order_with_multiple_product_variants(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'S', 0.25);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'M', 0.25);
 
         $this->actingAs($mydent)
             ->post(route('orders.store'), [
@@ -899,6 +901,9 @@ class ProductionWorkflowTest extends TestCase
     public function test_mydent_can_edit_and_delete_a_whole_draft_purchase_order(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'S', 0.25);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'M', 0.25);
+        $this->createMasterRatio('Celana', 'Chinos', 'L', 0.5);
         $this->actingAs($mydent)->post(route('orders.store'), [
             'po_number_mode' => 'manual',
             'po_number' => 'MYD-EDIT-001',
@@ -994,6 +999,7 @@ class ProductionWorkflowTest extends TestCase
     public function test_purchase_order_with_production_activity_cannot_be_edited_or_deleted(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'S', 0.25);
         $this->actingAs($mydent)->post(route('orders.store'), [
             'po_number_mode' => 'manual',
             'po_number' => 'MYD-ACTIVE-001',
@@ -1032,6 +1038,7 @@ class ProductionWorkflowTest extends TestCase
     public function test_mydent_can_cancel_an_accidental_fabric_request_before_later_activity(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'S', 0.25);
         $this->actingAs($mydent)->post(route('orders.store'), [
             'po_number_mode' => 'manual',
             'po_number' => 'MYD-CANCEL-FABRIC-001',
@@ -1077,6 +1084,7 @@ class ProductionWorkflowTest extends TestCase
     public function test_accidental_fabric_request_cannot_be_cancelled_after_later_activity(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'S', 0.25);
         $this->actingAs($mydent)->post(route('orders.store'), [
             'po_number_mode' => 'manual',
             'po_number' => 'MYD-CANCEL-FABRIC-BLOCKED',
@@ -1113,6 +1121,39 @@ class ProductionWorkflowTest extends TestCase
     public function test_purchase_order_can_be_saved_without_model_or_motif(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Celana', 'Joger', 'SML', 0.55);
+
+        $this->actingAs($mydent)
+            ->post(route('orders.store'), [
+                'po_number_mode' => 'automatic',
+                'po_date' => '2026-10-25',
+                'items' => [[
+                    'category' => 'Celana',
+                    'sub_category' => 'Joger',
+                    'product_name' => 'Celana Joger SML Abu Chinos',
+                    'model' => '',
+                    'size' => 'SML',
+                    'color' => 'Abu',
+                    'fabric_name' => 'Chinos',
+                    'yard_kg' => 45,
+                    'ratio' => 0.25,
+                ]],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('production_orders', [
+            'po_number' => 'MYD-2026-001',
+            'model' => null,
+            'product_name' => 'Celana Joger SML Abu Chinos',
+            'ratio' => '0.5500',
+            'ratio_result_qty' => '81.8182',
+            'order_quantity' => 82,
+        ]);
+    }
+
+    public function test_purchase_order_cannot_be_saved_without_a_master_ratio(): void
+    {
+        $mydent = User::factory()->create(['role' => 'mydent']);
 
         $this->actingAs($mydent)
             ->post(route('orders.store'), [
@@ -1130,13 +1171,10 @@ class ProductionWorkflowTest extends TestCase
                     'ratio' => 0.55,
                 ]],
             ])
-            ->assertRedirect();
+            ->assertSessionHasErrors('items.0.ratio');
 
-        $this->assertDatabaseHas('production_orders', [
-            'po_number' => 'MYD-2026-001',
-            'model' => null,
-            'product_name' => 'Celana Joger SML Abu Chinos',
-        ]);
+        $this->assertDatabaseCount('production_orders', 0);
+        $this->assertDatabaseCount('production_order_groups', 0);
     }
 
     public function test_purchase_order_form_supports_multiple_variant_rows_and_auto_numbering(): void
@@ -1317,10 +1355,9 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('<datalist id="po-ratios">', false)
             ->assertSee('data-sub-category-id="'.$subCategoryId.'" data-size="M"', false)
             ->assertSee('value="0.375"', false)
-            ->assertSee('matchingRatio?.value ?? \'0.25\'', false)
-            ->assertSee('syncRatio = false', false)
-            ->assertSee('dataset.manualRatio', false)
-            ->assertSee('ratioOverrides: [...form.querySelectorAll', false);
+            ->assertSee('matchingRatio?.value ?? \'\'', false)
+            ->assertSee('readonly required', false)
+            ->assertSee('Rasio otomatis mengikuti Master Rasio', false);
     }
 
     public function test_purchase_order_form_restores_master_ratio_and_recalculates_estimate(): void
@@ -1328,9 +1365,9 @@ class ProductionWorkflowTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'mydent']))
             ->get(route('orders.create'))
             ->assertOk()
-            ->assertSee('updateSuggestions(item, true);', false)
-            ->assertSee('syncRatio && !ratioInput.dataset.manualRatio', false)
-            ->assertSee('ratioOverrides: [...form.querySelectorAll', false);
+            ->assertSee('updateSuggestions(item);', false)
+            ->assertSee('ratioInput.value = matchingRatio?.value ?? \'\';', false)
+            ->assertSee('readonly required', false);
     }
 
     public function test_purchase_order_grid_can_download_one_pdf_for_all_variants(): void
@@ -1374,6 +1411,7 @@ class ProductionWorkflowTest extends TestCase
     {
         $existing = $this->makeOrder('draft', 10);
         $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->createMasterRatio('Pakaian', 'Kaos', 'L', 0.25);
 
         $this->actingAs($mydent)
             ->post(route('orders.store'), [
@@ -2008,6 +2046,49 @@ class ProductionWorkflowTest extends TestCase
         $this->actingAs($user)
             ->post(route('orders.actions.store', $order), ['action' => $action, ...$data])
             ->assertRedirect(route('orders.show', $order));
+    }
+
+    private function createMasterRatio(string $categoryName, string $subCategoryName, string $sizeName, float $ratio): void
+    {
+        $now = now();
+        $categoryId = DB::table('master_categories')->where('name', $categoryName)->value('id');
+        if ($categoryId === null) {
+            $categoryId = DB::table('master_categories')->insertGetId([
+                'code' => 'T-'.strtoupper(fake()->unique()->bothify('??##??')),
+                'name' => $categoryName,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $subCategoryId = DB::table('master_sub_categories')
+            ->where('category_id', $categoryId)
+            ->where('name', $subCategoryName)
+            ->value('id');
+        if ($subCategoryId === null) {
+            $subCategoryId = DB::table('master_sub_categories')->insertGetId([
+                'category_id' => $categoryId,
+                'code' => 'T-'.strtoupper(fake()->unique()->bothify('??##??')),
+                'name' => $subCategoryName,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $sizeId = DB::table('master_sizes')->where('name', $sizeName)->value('id');
+        if ($sizeId === null) {
+            $sizeId = DB::table('master_sizes')->insertGetId([
+                'code' => 'T-'.strtoupper(fake()->unique()->bothify('??##??')),
+                'name' => $sizeName,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        DB::table('master_ratios')->updateOrInsert(
+            ['sub_category_id' => $subCategoryId, 'size_id' => $sizeId],
+            ['ratio' => $ratio, 'created_at' => $now, 'updated_at' => $now],
+        );
     }
 
     private function makeOrder(string $status, int $quantity): ProductionOrder
