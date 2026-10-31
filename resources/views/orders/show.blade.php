@@ -11,7 +11,6 @@
             <div><div class="flex flex-wrap items-center gap-2.5"><h2 class="text-2xl font-bold tracking-tight text-slate-900">{{ $order->po_number }}</h2><x-order-status :order="$order" /></div><p class="mt-1 text-sm text-slate-500">{{ $order->product_name }}{{ $order->model ? ' · '.$order->model : '' }}{{ $order->size ? ' · '.$order->size : '' }}{{ $order->color ? ' · '.$order->color : '' }}{{ $order->fabric_name ? ' · '.$order->fabric_name : '' }}</p><p class="mt-1 text-[11px] text-slate-400">{{ $order->category }}{{ $order->sub_category ? ' · '.$order->sub_category : '' }}{{ $order->po_date ? ' · PO '.$order->po_date->format('d M Y') : '' }}</p></div>
             <div class="flex flex-wrap items-center gap-2">
                 @if ($canManagePo)
-                    <a href="{{ route('orders.edit', $order) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Edit PO</a>
                     <form method="POST" action="{{ route('orders.destroy', $order) }}" onsubmit="return confirm('Hapus seluruh PO {{ $order->po_number }} beserta semua variannya? Tindakan ini tidak dapat dibatalkan.')">
                         @csrf
                         @method('DELETE')

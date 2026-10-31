@@ -933,11 +933,12 @@ class ProductionWorkflowTest extends TestCase
 
         $this->get(route('orders.index'))
             ->assertOk()
-            ->assertSee(route('orders.edit', $order), false)
-            ->assertSee(route('orders.destroy', $order), false);
+            ->assertDontSee(route('orders.edit', $order), false)
+            ->assertSee(route('orders.destroy', $order), false)
+            ->assertSee('Hapus');
         $this->get(route('orders.show', $order))
             ->assertOk()
-            ->assertSee(route('orders.edit', $order), false)
+            ->assertDontSee('Edit PO')
             ->assertSee('Hapus PO');
         $this->get(route('orders.edit', $order))
             ->assertOk()
@@ -1023,7 +1024,7 @@ class ProductionWorkflowTest extends TestCase
         $this->get(route('orders.index'))
             ->assertOk()
             ->assertDontSee(route('orders.edit', $order), false)
-            ->assertSee('Tidak dapat diubah');
+            ->assertSee('Tidak dapat dihapus');
         $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'draft']);
     }
 

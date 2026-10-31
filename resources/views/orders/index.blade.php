@@ -48,16 +48,13 @@
                                 @if (auth()->user()->canPermission('orders.create'))
                                     <td class="px-5 py-4">
                                         @if ($order->can_manage_po)
-                                            <div class="flex items-center gap-2">
-                                                <a href="{{ route('orders.edit', $order) }}" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900">Edit</a>
-                                                <form method="POST" action="{{ route('orders.destroy', $order) }}" onsubmit="return confirm('Hapus seluruh PO {{ $order->po_number }} beserta semua variannya? Tindakan ini tidak dapat dibatalkan.')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-xs font-semibold text-rose-700 hover:text-rose-900">Hapus</button>
-                                                </form>
-                                            </div>
+                                            <form method="POST" action="{{ route('orders.destroy', $order) }}" onsubmit="return confirm('Hapus seluruh PO {{ $order->po_number }} beserta semua variannya? Tindakan ini tidak dapat dibatalkan.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-xs font-semibold text-rose-700 hover:text-rose-900">Hapus</button>
+                                            </form>
                                         @else
-                                            <span class="text-[11px] text-slate-400">Tidak dapat diubah</span>
+                                            <span class="text-[11px] text-slate-400">Tidak dapat dihapus</span>
                                         @endif
                                     </td>
                                 @endif
