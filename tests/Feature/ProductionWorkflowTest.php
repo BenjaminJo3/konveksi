@@ -931,6 +931,10 @@ class ProductionWorkflowTest extends TestCase
         ])->assertRedirect();
         $order = ProductionOrder::query()->where('po_number', 'MYD-EDIT-001')->orderBy('id')->firstOrFail();
 
+        $this->get(route('orders.index'))
+            ->assertOk()
+            ->assertSee(route('orders.edit', $order), false)
+            ->assertSee(route('orders.destroy', $order), false);
         $this->get(route('orders.show', $order))
             ->assertOk()
             ->assertSee(route('orders.edit', $order), false)
@@ -1016,6 +1020,10 @@ class ProductionWorkflowTest extends TestCase
             ->assertOk()
             ->assertDontSee('Edit PO')
             ->assertDontSee('Hapus PO');
+        $this->get(route('orders.index'))
+            ->assertOk()
+            ->assertDontSee(route('orders.edit', $order), false)
+            ->assertSee('Tidak dapat diubah');
         $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'draft']);
     }
 

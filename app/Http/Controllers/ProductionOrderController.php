@@ -65,8 +65,15 @@ class ProductionOrderController extends Controller
             });
         }
 
+        $orders = $query->paginate(10)->withQueryString();
+        if ($request->user()->canPermission('orders.create')) {
+            $orders->getCollection()->each(function (ProductionOrder $order): void {
+                $order->setAttribute('can_manage_po', $this->canManagePurchaseOrder($order->po_number));
+            });
+        }
+
         return view('orders.index', [
-            'orders' => $query->paginate(10)->withQueryString(),
+            'orders' => $orders,
             'statusFilter' => $status,
             'search' => $request->string('q')->toString(),
         ]);

@@ -34,7 +34,7 @@
         @else
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[820px] text-left">
-                    <thead><tr class="border-b border-slate-100 bg-slate-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-400"><th class="px-6 py-3.5">Nomor PO / Produk</th><th class="px-4 py-3.5">Varian</th><th class="px-4 py-3.5">Target</th><th class="px-4 py-3.5">Cutting</th><th class="px-4 py-3.5">Diterima</th><th class="px-4 py-3.5">Tenggat</th><th class="px-6 py-3.5">Status</th></tr></thead>
+                    <thead><tr class="border-b border-slate-100 bg-slate-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-400"><th class="px-6 py-3.5">Nomor PO / Produk</th><th class="px-4 py-3.5">Varian</th><th class="px-4 py-3.5">Target</th><th class="px-4 py-3.5">Cutting</th><th class="px-4 py-3.5">Diterima</th><th class="px-4 py-3.5">Tenggat</th><th class="px-6 py-3.5">Status</th>@if (auth()->user()->canPermission('orders.create'))<th class="px-5 py-3.5">Aksi</th>@endif</tr></thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach ($orders as $order)
                             <tr class="transition hover:bg-slate-50/60">
@@ -45,6 +45,22 @@
                                 <td class="px-4 py-4 text-xs text-slate-600">{{ number_format($order->quantityFor('goods_receipt')) }}</td>
                                 <td class="px-4 py-4 text-xs text-slate-500">{{ $order->delivery_due_at?->format('d M Y') ?? '—' }}</td>
                                 <td class="px-6 py-4"><x-order-status :order="$order" /></td>
+                                @if (auth()->user()->canPermission('orders.create'))
+                                    <td class="px-5 py-4">
+                                        @if ($order->can_manage_po)
+                                            <div class="flex items-center gap-2">
+                                                <a href="{{ route('orders.edit', $order) }}" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900">Edit</a>
+                                                <form method="POST" action="{{ route('orders.destroy', $order) }}" onsubmit="return confirm('Hapus seluruh PO {{ $order->po_number }} beserta semua variannya? Tindakan ini tidak dapat dibatalkan.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-xs font-semibold text-rose-700 hover:text-rose-900">Hapus</button>
+                                                </form>
+                                            </div>
+                                        @else
+                                            <span class="text-[11px] text-slate-400">Tidak dapat diubah</span>
+                                        @endif
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
