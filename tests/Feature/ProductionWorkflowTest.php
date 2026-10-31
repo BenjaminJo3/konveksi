@@ -489,6 +489,8 @@ class ProductionWorkflowTest extends TestCase
         $subCategory = DB::table('master_sub_categories')->where('name', 'Kaos')->first();
         $this->get(route('master-data.products.create'))
             ->assertOk()
+            ->assertSee('(wajib diisi)')
+            ->assertSee('id="model_id" name="model_id" required', false)
             ->assertSee('id="category_id" name="category_id" data-searchable-select data-large-dropdown data-dispatch-change', false)
             ->assertSee('id="color_id" name="color_id" data-searchable-select data-large-dropdown data-dispatch-change', false);
         $this->get(route('master-data.create', 'models'))
@@ -508,6 +510,14 @@ class ProductionWorkflowTest extends TestCase
         $color = DB::table('master_colors')->where('name', 'Navy')->first();
 
         $this->post(route('master-data.products.store'), [
+            'category_id' => $category->id,
+            'sub_category_id' => $subCategory->id,
+            'size_id' => $size->id,
+            'color_id' => $color->id,
+            'unit_id' => $unit->id,
+        ])->assertSessionHasErrors('model_id');
+
+        $this->post(route('master-data.products.store'), [
             'name' => 'Kaos Raglan Premium',
             'category_id' => $category->id,
             'sub_category_id' => $subCategory->id,
@@ -521,6 +531,7 @@ class ProductionWorkflowTest extends TestCase
         $product = DB::table('master_products')->first();
         $this->assertMatchesRegularExpression('/^BRG-[A-F0-9]{6}$/', $product->code);
         $this->assertSame('Kaos Navy Raglan Premium M', $product->name);
+        $this->assertSame($model->id, $product->model_id);
         $this->get(route('master-data.ratios'))
             ->assertOk()
             ->assertSee('Rasio kain per pcs')
