@@ -80,7 +80,7 @@
                     </colgroup>
                     <thead class="sticky top-0 z-10">
                         <tr class="bg-slate-50 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                            @foreach (['#', 'Kategori', 'Sub-kategori', 'Produk / katalog', 'Model / motif', 'Ukuran', 'Warna', 'Jenis kain', 'Kain yard/kg', 'Rib', 'Rasio yard/pcs', 'Estimasi hasil', ''] as $column)
+                            @foreach (['#', 'Kategori', 'Sub-kategori', 'Produk / katalog', 'Model / motif (opsional)', 'Ukuran', 'Warna', 'Jenis kain', 'Kain yard/kg', 'Rib', 'Rasio yard/pcs', 'Estimasi hasil', ''] as $column)
                                 <th class="border-b border-slate-200 px-1.5 py-2.5">{{ $column }}</th>
                             @endforeach
                         </tr>

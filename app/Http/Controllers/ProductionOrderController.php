@@ -180,7 +180,7 @@ class ProductionOrderController extends Controller
                 'items' => ['required', 'array', 'min:1', 'max:50'],
                 'items.*.category' => ['required', 'string', 'max:120'],
                 'items.*.sub_category' => ['required', 'string', 'max:120'],
-                'items.*.model' => ['required', 'string', 'max:120'],
+                'items.*.model' => ['nullable', 'string', 'max:120'],
                 'items.*.size' => ['required', 'string', 'max:80'],
                 'items.*.color' => ['required', 'string', 'max:80'],
                 'items.*.product_name' => ['required', 'string', 'max:160'],

@@ -896,6 +896,35 @@ class ProductionWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_purchase_order_can_be_saved_without_model_or_motif(): void
+    {
+        $mydent = User::factory()->create(['role' => 'mydent']);
+
+        $this->actingAs($mydent)
+            ->post(route('orders.store'), [
+                'po_number_mode' => 'automatic',
+                'po_date' => '2026-10-25',
+                'items' => [[
+                    'category' => 'Celana',
+                    'sub_category' => 'Joger',
+                    'product_name' => 'Celana Joger SML Abu Chinos',
+                    'model' => '',
+                    'size' => 'SML',
+                    'color' => 'Abu',
+                    'fabric_name' => 'Chinos',
+                    'yard_kg' => 45,
+                    'ratio' => 0.55,
+                ]],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('production_orders', [
+            'po_number' => 'MYD-2026-001',
+            'model' => null,
+            'product_name' => 'Celana Joger SML Abu Chinos',
+        ]);
+    }
+
     public function test_purchase_order_form_supports_multiple_variant_rows_and_auto_numbering(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);
@@ -925,7 +954,8 @@ class ProductionWorkflowTest extends TestCase
             ->assertSee('data-label="Kategori"', false)
             ->assertSee('name="items[0][sub_category]" value="" required disabled placeholder="Pilih kategori dulu"', false)
             ->assertSee('name="items[0][product_name]" value="" required disabled placeholder="Pilih kategori dulu"', false)
-            ->assertSee('name="items[0][model]" value="" required disabled placeholder="Pilih kategori dulu"', false)
+            ->assertSee('name="items[0][model]" value="" disabled placeholder="Opsional"', false)
+            ->assertDontSee('name="items[0][model]" value="" required', false)
             ->assertSee('<select aria-label="Ukuran" data-po-size data-searchable-select', false)
             ->assertSee('po-grid-searchable po-size-select', false)
             ->assertSee('name="items[0][size]" required disabled', false)
