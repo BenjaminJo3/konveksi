@@ -207,6 +207,12 @@ class ProductMasterController extends Controller
                 'sizes' => DB::table('master_sizes')->orderBy('name')->get(),
                 'colors' => DB::table('master_colors')->orderBy('name')->get(),
                 'units' => DB::table('master_units')->orderBy('name')->get(),
+                'fabrics' => DB::table('master_products')
+                    ->whereNotNull('fabric_name')
+                    ->where('fabric_name', '!=', '')
+                    ->distinct()
+                    ->orderBy('fabric_name')
+                    ->pluck('fabric_name'),
             ],
         ]);
     }

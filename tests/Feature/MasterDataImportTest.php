@@ -40,6 +40,36 @@ class MasterDataImportTest extends TestCase
         ]);
     }
 
+    public function test_import_keeps_category_and_fabric_separate_and_suggests_existing_fabrics(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $csv = implode("\n", [
+            'KATEGORI;SUB_KATEGORI;UKURAN;ARTIKEL;WARNA;JENIS KAIN',
+            'CELANA;JOGER;M;;ABU;CHINOS',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('master-data.import.store'), [
+                'file' => UploadedFile::fake()->createWithContent('categories-and-fabrics.csv', $csv),
+            ])
+            ->assertRedirect(route('master-data.products'))
+            ->assertSessionHas('success', '1 barang berhasil diimpor; 0 duplikat dilewati.');
+
+        $this->assertDatabaseHas('master_categories', ['name' => 'CELANA']);
+        $this->assertDatabaseMissing('master_categories', ['name' => 'CHINOS']);
+        $this->assertDatabaseCount('master_models', 0);
+        $this->assertDatabaseHas('master_products', [
+            'name' => 'JOGER ABU CHINOS M',
+            'fabric_name' => 'CHINOS',
+            'model_id' => null,
+        ]);
+
+        $this->get(route('master-data.products.create'))
+            ->assertOk()
+            ->assertSee('list="master-fabrics"', false)
+            ->assertSee('value="CHINOS"', false);
+    }
+
     public function test_admin_can_import_more_than_one_thousand_csv_rows(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -110,7 +140,7 @@ class MasterDataImportTest extends TestCase
                 ->post(route('master-data.import.store'), ['file' => $file])
                 ->assertRedirect(route('master-data.products'))
                 ->assertSessionHas('success', '1 barang berhasil diimpor; 0 duplikat dilewati.');
-                $this->assertDatabaseHas('master_products', ['name' => 'CIPIR PENDEK UNGU BUNGA All Size']);
+            $this->assertDatabaseHas('master_products', ['name' => 'CIPIR PENDEK UNGU BUNGA All Size']);
         } finally {
             @unlink($temporaryFile);
         }

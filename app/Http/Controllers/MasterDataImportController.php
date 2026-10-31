@@ -17,11 +17,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class MasterDataImportController extends Controller
 {
     private const HEADER_ALIASES = [
-        'category' => ['BAHANKATEGORI', 'BAHAN', 'KATEGORI', 'CATEGORY'],
+        'category' => ['BAHANKATEGORI', 'KATEGORI', 'CATEGORY'],
         'sub_category' => ['SUBKATEGORI', 'SUBCATEGORY'],
         'size' => ['UKURAN', 'SIZE'],
         'model' => ['ARTIKEL', 'MODEL', 'ARTICLE'],
         'color' => ['WARNA', 'COLOR'],
+        'fabric' => ['JENISKAIN', 'JENISBAHAN', 'BAHAN', 'FABRIC', 'MATERIAL'],
         'name' => ['NAMABARANG', 'NAMA', 'PRODUCTNAME', 'BARANG'],
     ];
 
@@ -35,8 +36,8 @@ class MasterDataImportController extends Controller
         return response()->streamDownload(function (): void {
             $output = fopen('php://output', 'wb');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['BAHAN / KATEGORI', 'SUB_KATEGORI', 'UKURAN', 'ARTIKEL', 'WARNA', 'NAMA BARANG']);
-            fputcsv($output, ['RAYON', 'CIPIR PENDEK', 'All Size', 'BUNGA', 'UNGU', 'CIPIR PENDEK UNGU BUNGA All Size']);
+            fputcsv($output, ['KATEGORI', 'SUB_KATEGORI', 'UKURAN', 'ARTIKEL', 'WARNA', 'JENIS KAIN', 'NAMA BARANG']);
+            fputcsv($output, ['CELANA', 'JOGER', 'All Size', '', 'ABU', 'CHINOS', 'JOGER ABU CHINOS All Size']);
             fclose($output);
         }, 'template-master-data.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
@@ -55,7 +56,7 @@ class MasterDataImportController extends Controller
         }
 
         $headers = $this->mapHeaders(array_shift($rows));
-        $requiredHeaders = array_diff(array_keys(self::HEADER_ALIASES), ['name']);
+        $requiredHeaders = ['category', 'sub_category', 'color'];
         $missing = array_diff($requiredHeaders, array_keys($headers));
         if ($missing !== []) {
             throw ValidationException::withMessages([
@@ -76,7 +77,7 @@ class MasterDataImportController extends Controller
 
             foreach ($dataRows as $index => $row) {
                 $lineNumber = $index + 2;
-                $record = [];
+                $record = ['fabric' => '', 'model' => '', 'size' => ''];
                 foreach ($headers as $key => $column) {
                     $record[$key] = trim((string) ($row[$column] ?? ''));
                 }
@@ -84,7 +85,7 @@ class MasterDataImportController extends Controller
                     continue;
                 }
 
-                foreach (['category', 'sub_category', 'model', 'color'] as $required) {
+                foreach (['category', 'sub_category', 'color'] as $required) {
                     if (($record[$required] ?? '') === '') {
                         throw ValidationException::withMessages([
                             'file' => "Baris {$lineNumber}: kolom {$this->headerLabel($required)} wajib diisi.",
@@ -92,17 +93,18 @@ class MasterDataImportController extends Controller
                     }
                 }
 
-                $record['category'] = $this->bounded($record['category'], 100, $lineNumber, 'BAHAN/KATEGORI');
+                $record['category'] = $this->bounded($record['category'], 100, $lineNumber, 'KATEGORI');
                 $record['sub_category'] = $this->bounded($record['sub_category'], 100, $lineNumber, 'SUB_KATEGORI');
-                $record['model'] = $this->bounded($record['model'], 120, $lineNumber, 'ARTIKEL');
+                $record['model'] = $record['model'] === '' ? null : $this->bounded($record['model'], 120, $lineNumber, 'ARTIKEL');
                 $record['size'] = $record['size'] === '' ? 'All Size' : $this->bounded($record['size'], 40, $lineNumber, 'UKURAN');
                 $record['color'] = $this->bounded($record['color'], 80, $lineNumber, 'WARNA');
+                $record['fabric'] = $record['fabric'] === '' ? null : $this->bounded($record['fabric'], 120, $lineNumber, 'JENIS KAIN');
                 $categoryId = $this->findOrCreate('master_categories', ['name' => $record['category']], 'KTG', $codes);
                 $subCategoryId = $this->findOrCreate('master_sub_categories', [
                     'category_id' => $categoryId,
                     'name' => $record['sub_category'],
                 ], 'SUB', $codes);
-                $modelId = $this->findOrCreate('master_models', [
+                $modelId = $record['model'] === null ? null : $this->findOrCreate('master_models', [
                     'category_id' => $categoryId,
                     'sub_category_id' => $subCategoryId,
                     'name' => $record['model'],
@@ -115,6 +117,7 @@ class MasterDataImportController extends Controller
                     $record['color'],
                     $record['model'],
                     $record['size'],
+                    $record['fabric'],
                 );
 
                 $product = DB::table('master_products')
@@ -123,6 +126,7 @@ class MasterDataImportController extends Controller
                     ->where('model_id', $modelId)
                     ->where('size_id', $sizeId)
                     ->where('color_id', $colorId)
+                    ->where('fabric_name', $record['fabric'])
                     ->first();
                 if ($product) {
                     $duplicates++;
@@ -139,6 +143,7 @@ class MasterDataImportController extends Controller
                     'size_id' => $sizeId,
                     'color_id' => $colorId,
                     'unit_id' => $unitId,
+                    'fabric_name' => $record['fabric'],
                     'is_active' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -179,6 +184,15 @@ class MasterDataImportController extends Controller
             foreach ($normalizedHeaders as $index => $header) {
                 if (in_array($header, $aliases, true)) {
                     $mapping[$field] = $index;
+                    break;
+                }
+            }
+        }
+        if (! isset($mapping['category'])) {
+            foreach ($normalizedHeaders as $index => $header) {
+                if ($header === 'BAHAN') {
+                    $mapping['category'] = $index;
+                    unset($mapping['fabric']);
                     break;
                 }
             }
@@ -231,11 +245,12 @@ class MasterDataImportController extends Controller
     private function headerLabel(string $field): string
     {
         return [
-            'category' => 'BAHAN/KATEGORI',
+            'category' => 'KATEGORI',
             'sub_category' => 'SUB_KATEGORI',
             'size' => 'UKURAN',
             'model' => 'ARTIKEL',
             'color' => 'WARNA',
+            'fabric' => 'JENIS KAIN',
             'name' => 'NAMA BARANG',
         ][$field] ?? $field;
     }

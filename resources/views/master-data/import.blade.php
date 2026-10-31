@@ -12,7 +12,7 @@
         <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
             <p class="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Import katalog</p>
             <h2 class="mt-1 text-xl font-bold text-slate-900">Upload file master data</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-500">Unggah Excel (.xlsx) atau CSV sesuai tabel contoh. Kategori dan atribut yang belum ada akan dibuat otomatis sebelum barang disimpan; nama barang dibentuk dari Sub-kategori, Warna, Artikel, dan Ukuran.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-500">Unggah Excel (.xlsx) atau CSV sesuai tabel contoh. Kategori dan atribut yang belum ada akan dibuat otomatis sebelum barang disimpan; kategori seperti Celana terpisah dari jenis kain seperti Chinos.</p>
 
             <form method="POST" action="{{ route('master-data.import.store') }}" enctype="multipart/form-data" class="mt-6 space-y-4">
                 @csrf
@@ -40,16 +40,17 @@
                 <table class="w-full min-w-[440px] text-left text-xs">
                     <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th class="px-3 py-2.5">Header</th><th class="px-3 py-2.5">Contoh / aturan</th></tr></thead>
                     <tbody class="divide-y divide-slate-100 text-slate-700">
-                        <tr><td class="px-3 py-2.5 font-semibold">BAHAN / KATEGORI</td><td class="px-3 py-2.5">RAYON · wajib</td></tr>
+                        <tr><td class="px-3 py-2.5 font-semibold">KATEGORI</td><td class="px-3 py-2.5">CELANA · wajib</td></tr>
                         <tr><td class="px-3 py-2.5 font-semibold">SUB_KATEGORI</td><td class="px-3 py-2.5">CIPIR PENDEK · wajib</td></tr>
                         <tr><td class="px-3 py-2.5 font-semibold">UKURAN</td><td class="px-3 py-2.5">S, M, L · boleh kosong</td></tr>
-                        <tr><td class="px-3 py-2.5 font-semibold">ARTIKEL</td><td class="px-3 py-2.5">BUNGA · wajib</td></tr>
+                        <tr><td class="px-3 py-2.5 font-semibold">ARTIKEL</td><td class="px-3 py-2.5">Model / artikel · boleh kosong</td></tr>
                         <tr><td class="px-3 py-2.5 font-semibold">WARNA</td><td class="px-3 py-2.5">UNGU · wajib</td></tr>
-                        <tr><td class="px-3 py-2.5 font-semibold">NAMA BARANG</td><td class="px-3 py-2.5">Otomatis: SUB_KATEGORI + WARNA + ARTIKEL + UKURAN · opsional</td></tr>
+                        <tr><td class="px-3 py-2.5 font-semibold">JENIS KAIN</td><td class="px-3 py-2.5">CHINOS · opsional, disimpan pada jenis bahan</td></tr>
+                        <tr><td class="px-3 py-2.5 font-semibold">NAMA BARANG</td><td class="px-3 py-2.5">Otomatis: SUB_KATEGORI + WARNA + ARTIKEL + JENIS KAIN + UKURAN · opsional</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p class="mt-4 text-xs leading-5 text-slate-500">Kode barang serta kode kategori, sub-kategori, artikel, ukuran, warna, dan unit akan dibuat otomatis. Bila ukuran kosong, nilai katalog menjadi “All Size”.</p>
+            <p class="mt-4 text-xs leading-5 text-slate-500">Template lama dengan header BAHAN / KATEGORI tetap didukung. Kode barang serta kode kategori, sub-kategori, artikel (jika diisi), ukuran, warna, dan unit dibuat otomatis. Bila ukuran kosong, nilai katalog menjadi “All Size”.</p>
         </section>
     </div>
 @endsection
