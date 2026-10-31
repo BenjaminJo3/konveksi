@@ -896,6 +896,129 @@ class ProductionWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_mydent_can_edit_and_delete_a_whole_draft_purchase_order(): void
+    {
+        $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->actingAs($mydent)->post(route('orders.store'), [
+            'po_number_mode' => 'manual',
+            'po_number' => 'MYD-EDIT-001',
+            'po_date' => '2026-10-25',
+            'delivery_due_at' => '2026-11-25',
+            'items' => [
+                [
+                    'category' => 'Pakaian',
+                    'sub_category' => 'Kaos',
+                    'product_name' => 'Kaos Raglan',
+                    'model' => 'Raglan',
+                    'color' => 'Navy',
+                    'size' => 'S',
+                    'fabric_name' => 'Cotton',
+                    'yard_kg' => 25,
+                    'ratio' => 0.25,
+                ],
+                [
+                    'category' => 'Pakaian',
+                    'sub_category' => 'Kaos',
+                    'product_name' => 'Kaos Raglan',
+                    'model' => '',
+                    'color' => 'Putih',
+                    'size' => 'M',
+                    'fabric_name' => 'Cotton',
+                    'yard_kg' => 30,
+                    'ratio' => 0.25,
+                ],
+            ],
+        ])->assertRedirect();
+        $order = ProductionOrder::query()->where('po_number', 'MYD-EDIT-001')->orderBy('id')->firstOrFail();
+
+        $this->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertSee(route('orders.edit', $order), false)
+            ->assertSee('Hapus PO');
+        $this->get(route('orders.edit', $order))
+            ->assertOk()
+            ->assertSee('MYD-EDIT-001')
+            ->assertSee('Kaos Raglan');
+
+        $this->put(route('orders.update', $order), [
+            'po_number_mode' => 'manual',
+            'po_number' => 'MYD-EDIT-001',
+            'po_date' => '2026-10-26 00:00:00',
+            'delivery_due_at' => '2026-11-30 00:00:00',
+            'items' => [[
+                'category' => 'Celana',
+                'sub_category' => 'Chinos',
+                'product_name' => 'Celana Chinos',
+                'model' => '',
+                'color' => 'Hitam',
+                'size' => 'L',
+                'fabric_name' => 'Chinos',
+                'yard_kg' => 50,
+                'ratio' => 0.5,
+            ]],
+        ])->assertRedirect(route('orders.show', $order));
+
+        $this->assertDatabaseCount('production_orders', 1);
+        $this->assertDatabaseHas('production_orders', [
+            'id' => $order->id,
+            'po_number' => 'MYD-EDIT-001',
+            'po_date' => '2026-10-26 00:00:00',
+            'product_name' => 'Celana Chinos',
+            'size' => 'L',
+            'order_quantity' => 100,
+            'delivery_due_at' => '2026-11-30 00:00:00',
+        ]);
+        $this->assertDatabaseHas('production_order_groups', [
+            'po_number' => 'MYD-EDIT-001',
+            'po_date' => '2026-10-26 00:00:00',
+        ]);
+
+        $this->delete(route('orders.destroy', $order))
+            ->assertRedirect(route('orders.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('production_orders', ['po_number' => 'MYD-EDIT-001']);
+        $this->assertDatabaseMissing('production_order_groups', ['po_number' => 'MYD-EDIT-001']);
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'purchase_order_deleted',
+            'subject_type' => 'production_order_group',
+            'subject_id' => 'MYD-EDIT-001',
+        ]);
+    }
+
+    public function test_purchase_order_with_production_activity_cannot_be_edited_or_deleted(): void
+    {
+        $mydent = User::factory()->create(['role' => 'mydent']);
+        $this->actingAs($mydent)->post(route('orders.store'), [
+            'po_number_mode' => 'manual',
+            'po_number' => 'MYD-ACTIVE-001',
+            'po_date' => '2026-10-25',
+            'items' => [[
+                'category' => 'Pakaian',
+                'sub_category' => 'Kaos',
+                'product_name' => 'Kaos Raglan',
+                'color' => 'Navy',
+                'size' => 'S',
+                'yard_kg' => 25,
+                'ratio' => 0.25,
+            ]],
+        ])->assertRedirect();
+        $order = ProductionOrder::query()->where('po_number', 'MYD-ACTIVE-001')->firstOrFail();
+        WorkflowEntry::query()->create([
+            'production_order_id' => $order->id,
+            'user_id' => $mydent->id,
+            'action' => 'request_fabric',
+        ]);
+
+        $this->get(route('orders.edit', $order))->assertStatus(409);
+        $this->delete(route('orders.destroy', $order))->assertStatus(409);
+        $this->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertDontSee('Edit PO')
+            ->assertDontSee('Hapus PO');
+        $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'draft']);
+    }
+
     public function test_purchase_order_can_be_saved_without_model_or_motif(): void
     {
         $mydent = User::factory()->create(['role' => 'mydent']);

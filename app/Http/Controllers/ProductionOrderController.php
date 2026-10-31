@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\ProductionOrder;
-use App\Services\RolePermissionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -77,65 +77,39 @@ class ProductionOrderController extends Controller
         abort_unless(auth()->user()->canPermission('orders.create'), 403);
 
         return view('orders.create', [
-            'masters' => [
-                'categories' => DB::table('master_categories')->orderBy('name')->get(['id', 'name']),
-                'subCategories' => DB::table('master_sub_categories')
-                    ->join('master_categories', 'master_categories.id', '=', 'master_sub_categories.category_id')
-                    ->orderBy('master_sub_categories.name')
-                    ->get([
-                        'master_sub_categories.id',
-                        'master_sub_categories.name',
-                        'master_sub_categories.category_id',
-                    ]),
-                'models' => DB::table('master_models')
-                    ->join('master_sub_categories', 'master_sub_categories.id', '=', 'master_models.sub_category_id')
-                    ->orderBy('master_models.name')
-                    ->get([
-                        'master_models.id',
-                        'master_models.name',
-                        'master_models.category_id',
-                        'master_models.sub_category_id',
-                    ]),
-                'sizes' => DB::table('master_sizes')->orderBy('name')->pluck('name'),
-                'colors' => DB::table('master_colors')->orderBy('name')->pluck('name'),
-                'fabrics' => DB::table('master_products')
-                    ->whereNotNull('fabric_name')
-                    ->where('fabric_name', '!=', '')
-                    ->distinct()
-                    ->orderBy('fabric_name')
-                    ->pluck('fabric_name'),
-                'products' => DB::table('master_products as products')
-                    ->join('master_categories as categories', 'categories.id', '=', 'products.category_id')
-                    ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'products.sub_category_id')
-                    ->leftJoin('master_models as models', 'models.id', '=', 'products.model_id')
-                    ->join('master_sizes as sizes', 'sizes.id', '=', 'products.size_id')
-                    ->join('master_colors as colors', 'colors.id', '=', 'products.color_id')
-                    ->where('products.is_active', true)
-                    ->select([
-                        'products.code',
-                        'products.name',
-                        'products.fabric_name',
-                        'products.category_id',
-                        'products.sub_category_id',
-                        'products.model_id',
-                        'categories.name as category_name',
-                        'sub_categories.name as sub_category_name',
-                        'models.name as model_name',
-                        'sizes.name as size_name',
-                        'colors.name as color_name',
-                    ])
-                    ->orderBy('products.name')
-                    ->get(),
-                'ratios' => DB::table('master_ratios')
-                    ->join('master_sizes', 'master_sizes.id', '=', 'master_ratios.size_id')
-                    ->orderBy('master_ratios.sub_category_id')
-                    ->orderBy('master_sizes.name')
-                    ->get([
-                        'master_ratios.sub_category_id',
-                        'master_sizes.name as size_name',
-                        'master_ratios.ratio',
-                    ]),
-            ],
+            'masters' => $this->formMasters(),
+        ]);
+    }
+
+    public function edit(ProductionOrder $order): View
+    {
+        abort_unless(auth()->user()->canPermission('orders.create'), 403);
+        $this->assertPurchaseOrderEditable($order->po_number);
+
+        $group = DB::table('production_order_groups')->where('po_number', $order->po_number)->first();
+        abort_if($group === null, 404);
+        $items = ProductionOrder::query()
+            ->where('po_number', $order->po_number)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (ProductionOrder $item): array => [
+                'category' => $item->category,
+                'sub_category' => $item->sub_category,
+                'product_name' => $item->product_name,
+                'model' => $item->model,
+                'size' => $item->size,
+                'color' => $item->color,
+                'fabric_name' => $item->fabric_name,
+                'yard_kg' => $item->yard_kg,
+                'rib_qty' => $item->rib_qty,
+                'ratio' => $item->ratio,
+            ])->all();
+
+        return view('orders.create', [
+            'masters' => $this->formMasters(),
+            'editingOrder' => $order,
+            'editingGroup' => $group,
+            'items' => $items,
         ]);
     }
 
@@ -167,28 +141,7 @@ class ProductionOrderController extends Controller
             $manualPoNumber = $legacy['po_number'] ?? null;
             $numberMode = $manualPoNumber ? 'manual' : 'automatic';
         } else {
-            $values = $request->validate([
-                'po_number_mode' => ['required', Rule::in(['automatic', 'manual'])],
-                'po_number' => [
-                    Rule::requiredIf(fn (): bool => $request->input('po_number_mode') === 'manual'),
-                    'nullable',
-                    'string',
-                    'max:60',
-                ],
-                'po_date' => ['required', 'date'],
-                'delivery_due_at' => ['nullable', 'date'],
-                'items' => ['required', 'array', 'min:1', 'max:50'],
-                'items.*.category' => ['required', 'string', 'max:120'],
-                'items.*.sub_category' => ['required', 'string', 'max:120'],
-                'items.*.model' => ['nullable', 'string', 'max:120'],
-                'items.*.size' => ['required', 'string', 'max:80'],
-                'items.*.color' => ['required', 'string', 'max:80'],
-                'items.*.product_name' => ['required', 'string', 'max:160'],
-                'items.*.fabric_name' => ['nullable', 'string', 'max:120'],
-                'items.*.yard_kg' => ['required', 'numeric', 'gt:0', 'max:100000000'],
-                'items.*.rib_qty' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
-                'items.*.ratio' => ['required', 'numeric', 'decimal:0,4', 'gt:0', 'max:100000000'],
-            ]);
+            $values = $this->validateOrderForm($request);
             $items = $values['items'];
             $poDate = $values['po_date'];
             $manualPoNumber = $values['po_number'] ?? null;
@@ -203,26 +156,7 @@ class ProductionOrderController extends Controller
             ]);
         }
 
-        foreach ($items as $index => &$item) {
-            $ratioResult = isset($item['target_qty'])
-                ? (float) $item['target_qty']
-                : round((float) $item['yard_kg'] / (float) $item['ratio'], 4, PHP_ROUND_HALF_UP);
-            $targetQuantity = isset($item['target_qty'])
-                ? (int) $item['target_qty']
-                : (int) round($ratioResult, 0, PHP_ROUND_HALF_UP);
-
-            if ($ratioResult > 999999999.9999 || $targetQuantity < 1 || $targetQuantity > 4294967295) {
-                throw ValidationException::withMessages([
-                    "items.{$index}.yard_kg" => 'Hasil perhitungan rasio harus sedikitnya 1 pcs dan tidak melebihi kapasitas sistem.',
-                ]);
-            }
-
-            $item['ratio_result_qty'] = $ratioResult;
-            $item['order_quantity'] = $targetQuantity;
-            $item['fabric_estimate'] = $item['yard_kg'];
-            $item['fabric_ratio'] = 1 / (float) $item['ratio'];
-        }
-        unset($item);
+        $items = $this->prepareOrderItems($items);
 
         $order = DB::transaction(function () use ($request, $items, $poDate, $manualPoNumber, $numberMode): ProductionOrder {
             $poNumber = $numberMode === 'manual'
@@ -277,6 +211,287 @@ class ProductionOrderController extends Controller
         return redirect()->route('orders.show', $order)->with('success', 'Purchase Order berhasil dibuat.');
     }
 
+    public function update(Request $request, ProductionOrder $order): RedirectResponse
+    {
+        abort_unless($request->user()->canPermission('orders.create'), 403);
+        $values = $this->validateOrderForm($request);
+        $items = $this->prepareOrderItems($values['items']);
+        $poNumber = $order->po_number;
+
+        $updatedOrder = DB::transaction(function () use ($request, $values, $items, $poNumber): ProductionOrder {
+            $group = DB::table('production_order_groups')
+                ->where('po_number', $poNumber)
+                ->lockForUpdate()
+                ->first();
+            abort_if($group === null, 404);
+            $existingItems = $this->editablePurchaseOrderItems($poNumber, true);
+            $now = now();
+
+            DB::table('production_order_groups')
+                ->where('po_number', $poNumber)
+                ->update(['po_date' => $values['po_date'], 'updated_at' => $now]);
+
+            foreach ($items as $index => $item) {
+                $attributes = [
+                    'category' => $item['category'],
+                    'sub_category' => $item['sub_category'],
+                    'model' => $item['model'] ?? null,
+                    'size' => $item['size'],
+                    'product_name' => $item['product_name'],
+                    'color' => $item['color'],
+                    'fabric_name' => $item['fabric_name'] ?? null,
+                    'order_quantity' => $item['order_quantity'],
+                    'fabric_estimate' => $item['fabric_estimate'],
+                    'fabric_ratio' => $item['fabric_ratio'],
+                    'yard_kg' => $item['yard_kg'],
+                    'rib_qty' => $item['rib_qty'] ?? null,
+                    'ratio' => $item['ratio'],
+                    'ratio_result_qty' => $item['ratio_result_qty'],
+                    'delivery_due_at' => $values['delivery_due_at'] ?? null,
+                    'po_date' => $values['po_date'],
+                ];
+
+                if (isset($existingItems[$index])) {
+                    $existingItems[$index]->fill($attributes)->save();
+
+                    continue;
+                }
+
+                $newItem = ProductionOrder::create([
+                    ...$attributes,
+                    'po_number' => $poNumber,
+                    'created_by' => $request->user()->id,
+                    'branch_id' => $request->user()->branch_id,
+                ]);
+                $this->record($newItem, $request->user()->id, 'po_created', [
+                    'notes' => 'Item Purchase Order ditambahkan saat PO masih draft.',
+                ]);
+            }
+
+            $existingItems->slice(count($items))->each->delete();
+
+            AuditLog::query()->create([
+                'user_id' => $request->user()->id,
+                'event' => 'purchase_order_updated',
+                'subject_type' => 'production_order_group',
+                'subject_id' => $poNumber,
+                'description' => 'Purchase Order draft diperbarui.',
+                'metadata' => ['item_count' => count($items)],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return ProductionOrder::query()->where('po_number', $poNumber)->orderBy('id')->firstOrFail();
+        });
+
+        return redirect()->route('orders.show', $updatedOrder)->with('success', 'Purchase Order berhasil diperbarui.');
+    }
+
+    public function destroy(Request $request, ProductionOrder $order): RedirectResponse
+    {
+        abort_unless($request->user()->canPermission('orders.create'), 403);
+        $poNumber = $order->po_number;
+
+        DB::transaction(function () use ($request, $poNumber): void {
+            $group = DB::table('production_order_groups')
+                ->where('po_number', $poNumber)
+                ->lockForUpdate()
+                ->first();
+            abort_if($group === null, 404);
+            $items = $this->editablePurchaseOrderItems($poNumber, true);
+
+            AuditLog::query()->create([
+                'user_id' => $request->user()->id,
+                'event' => 'purchase_order_deleted',
+                'subject_type' => 'production_order_group',
+                'subject_id' => $poNumber,
+                'description' => 'Purchase Order draft dihapus.',
+                'metadata' => [
+                    'item_ids' => $items->pluck('id')->all(),
+                    'item_count' => $items->count(),
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            $items->each->delete();
+            DB::table('production_order_groups')->where('po_number', $poNumber)->delete();
+        });
+
+        return redirect()->route('orders.index')->with('success', "Purchase Order {$poNumber} berhasil dihapus.");
+    }
+
+    private function validateOrderForm(Request $request): array
+    {
+        return $request->validate([
+            'po_number_mode' => ['required', Rule::in(['automatic', 'manual'])],
+            'po_number' => [
+                Rule::requiredIf(fn (): bool => $request->input('po_number_mode') === 'manual'),
+                'nullable',
+                'string',
+                'max:60',
+            ],
+            'po_date' => ['required', 'date'],
+            'delivery_due_at' => ['nullable', 'date'],
+            'items' => ['required', 'array', 'min:1', 'max:50'],
+            'items.*.category' => ['required', 'string', 'max:120'],
+            'items.*.sub_category' => ['required', 'string', 'max:120'],
+            'items.*.model' => ['nullable', 'string', 'max:120'],
+            'items.*.size' => ['required', 'string', 'max:80'],
+            'items.*.color' => ['required', 'string', 'max:80'],
+            'items.*.product_name' => ['required', 'string', 'max:160'],
+            'items.*.fabric_name' => ['nullable', 'string', 'max:120'],
+            'items.*.yard_kg' => ['required', 'numeric', 'gt:0', 'max:100000000'],
+            'items.*.rib_qty' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
+            'items.*.ratio' => ['required', 'numeric', 'decimal:0,4', 'gt:0', 'max:100000000'],
+        ]);
+    }
+
+    private function prepareOrderItems(array $items): array
+    {
+        foreach ($items as $index => &$item) {
+            $ratioResult = isset($item['target_qty'])
+                ? (float) $item['target_qty']
+                : round((float) $item['yard_kg'] / (float) $item['ratio'], 4, PHP_ROUND_HALF_UP);
+            $targetQuantity = isset($item['target_qty'])
+                ? (int) $item['target_qty']
+                : (int) round($ratioResult, 0, PHP_ROUND_HALF_UP);
+
+            if ($ratioResult > 999999999.9999 || $targetQuantity < 1 || $targetQuantity > 4294967295) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.yard_kg" => 'Hasil perhitungan rasio harus sedikitnya 1 pcs dan tidak melebihi kapasitas sistem.',
+                ]);
+            }
+
+            $item['ratio_result_qty'] = $ratioResult;
+            $item['order_quantity'] = $targetQuantity;
+            $item['fabric_estimate'] = $item['yard_kg'];
+            $item['fabric_ratio'] = 1 / (float) $item['ratio'];
+        }
+        unset($item);
+
+        return $items;
+    }
+
+    private function editablePurchaseOrderItems(string $poNumber, bool $lock = false): Collection
+    {
+        $query = ProductionOrder::query()
+            ->where('po_number', $poNumber)
+            ->orderBy('id');
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+        $items = $query->get();
+        abort_if($items->isEmpty(), 404);
+
+        $ids = $items->pluck('id');
+        $hasProductionActivity = DB::table('workflow_entries')
+            ->whereIn('production_order_id', $ids)
+            ->where('action', '!=', 'po_created')
+            ->exists();
+        $hasDeliveryOrder = DB::table('delivery_orders')
+            ->whereIn('production_order_id', $ids)
+            ->exists();
+
+        abort_if(
+            $items->contains(fn (ProductionOrder $item): bool => $item->status !== 'draft')
+                || $hasProductionActivity
+                || $hasDeliveryOrder,
+            409,
+            'PO hanya dapat diedit atau dihapus jika semua item masih Draft dan belum memiliki aktivitas produksi atau surat jalan.'
+        );
+
+        return $items;
+    }
+
+    private function assertPurchaseOrderEditable(string $poNumber): void
+    {
+        $this->editablePurchaseOrderItems($poNumber);
+    }
+
+    private function canManagePurchaseOrder(string $poNumber): bool
+    {
+        if (! auth()->user()->canPermission('orders.create')) {
+            return false;
+        }
+
+        $items = ProductionOrder::query()->where('po_number', $poNumber)->get();
+        if ($items->isEmpty() || $items->contains(fn (ProductionOrder $item): bool => $item->status !== 'draft')) {
+            return false;
+        }
+
+        $ids = $items->pluck('id');
+
+        return ! DB::table('workflow_entries')
+            ->whereIn('production_order_id', $ids)
+            ->where('action', '!=', 'po_created')
+            ->exists()
+            && ! DB::table('delivery_orders')->whereIn('production_order_id', $ids)->exists();
+    }
+
+    private function formMasters(): array
+    {
+        return [
+            'categories' => DB::table('master_categories')->orderBy('name')->get(['id', 'name']),
+            'subCategories' => DB::table('master_sub_categories')
+                ->join('master_categories', 'master_categories.id', '=', 'master_sub_categories.category_id')
+                ->orderBy('master_sub_categories.name')
+                ->get([
+                    'master_sub_categories.id',
+                    'master_sub_categories.name',
+                    'master_sub_categories.category_id',
+                ]),
+            'models' => DB::table('master_models')
+                ->join('master_sub_categories', 'master_sub_categories.id', '=', 'master_models.sub_category_id')
+                ->orderBy('master_models.name')
+                ->get([
+                    'master_models.id',
+                    'master_models.name',
+                    'master_models.category_id',
+                    'master_models.sub_category_id',
+                ]),
+            'sizes' => DB::table('master_sizes')->orderBy('name')->pluck('name'),
+            'colors' => DB::table('master_colors')->orderBy('name')->pluck('name'),
+            'fabrics' => DB::table('master_products')
+                ->whereNotNull('fabric_name')
+                ->where('fabric_name', '!=', '')
+                ->distinct()
+                ->orderBy('fabric_name')
+                ->pluck('fabric_name'),
+            'products' => DB::table('master_products as products')
+                ->join('master_categories as categories', 'categories.id', '=', 'products.category_id')
+                ->join('master_sub_categories as sub_categories', 'sub_categories.id', '=', 'products.sub_category_id')
+                ->leftJoin('master_models as models', 'models.id', '=', 'products.model_id')
+                ->join('master_sizes as sizes', 'sizes.id', '=', 'products.size_id')
+                ->join('master_colors as colors', 'colors.id', '=', 'products.color_id')
+                ->where('products.is_active', true)
+                ->select([
+                    'products.code',
+                    'products.name',
+                    'products.fabric_name',
+                    'products.category_id',
+                    'products.sub_category_id',
+                    'products.model_id',
+                    'categories.name as category_name',
+                    'sub_categories.name as sub_category_name',
+                    'models.name as model_name',
+                    'sizes.name as size_name',
+                    'colors.name as color_name',
+                ])
+                ->orderBy('products.name')
+                ->get(),
+            'ratios' => DB::table('master_ratios')
+                ->join('master_sizes', 'master_sizes.id', '=', 'master_ratios.size_id')
+                ->orderBy('master_ratios.sub_category_id')
+                ->orderBy('master_sizes.name')
+                ->get([
+                    'master_ratios.sub_category_id',
+                    'master_sizes.name as size_name',
+                    'master_ratios.ratio',
+                ]),
+        ];
+    }
+
     private function nextPoNumber(int $year): string
     {
         $prefix = "MYD-{$year}-";
@@ -301,6 +516,7 @@ class ProductionOrderController extends Controller
                 ->orderBy('id')
                 ->get(),
             'timeline' => $entries,
+            'canManagePo' => $this->canManagePurchaseOrder($order->po_number),
             'availableActions' => $this->availableActions($order),
             'summary' => [
                 'cut' => $order->quantityFor('cutting_report'),

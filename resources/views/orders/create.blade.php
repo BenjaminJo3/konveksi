@@ -1,18 +1,21 @@
 @extends('layouts.app')
 
-@section('title', 'Buat PO Baru')
-@section('heading', 'Buat Purchase Order')
-@section('breadcrumb', 'Purchase Order / Baru')
+@section('title', isset($editingOrder) ? 'Edit '.$editingOrder->po_number : 'Buat PO Baru')
+@section('heading', isset($editingOrder) ? 'Edit Purchase Order' : 'Buat Purchase Order')
+@section('breadcrumb', isset($editingOrder) ? 'Purchase Order / '.$editingOrder->po_number.' / Edit' : 'Purchase Order / Baru')
 
 @section('content')
     <div class="mb-6">
         <a href="{{ route('orders.index') }}" class="text-xs font-semibold text-slate-500 hover:text-emerald-700">← Kembali ke daftar PO</a>
-        <h2 class="mt-3 text-2xl font-bold tracking-tight text-slate-900">Buat Purchase Order baru</h2>
+        <h2 class="mt-3 text-2xl font-bold tracking-tight text-slate-900">{{ isset($editingOrder) ? 'Edit '.$editingOrder->po_number : 'Buat Purchase Order baru' }}</h2>
         <p class="mt-1 text-sm text-slate-500">Satu nomor PO dapat berisi beberapa item atau varian ukuran dan warna.</p>
     </div>
 
-    <form method="POST" action="{{ route('orders.store') }}" data-draft-key="po-create-draft-{{ auth()->id() }}" data-validation-errors="{{ $errors->any() ? 'true' : 'false' }}" class="space-y-5">
+    <form method="POST" action="{{ isset($editingOrder) ? route('orders.update', $editingOrder) : route('orders.store') }}" data-draft-key="{{ isset($editingOrder) ? '' : 'po-create-draft-'.auth()->id() }}" data-validation-errors="{{ $errors->any() ? 'true' : 'false' }}" class="space-y-5">
         @csrf
+        @if (isset($editingOrder))
+            @method('PUT')
+        @endif
         <datalist id="po-sub-categories">
             @foreach ($masters['subCategories'] as $subCategory)<option value="{{ $subCategory->name }}" data-sub-category-id="{{ $subCategory->id }}" data-category-id="{{ $subCategory->category_id }}">@endforeach
         </datalist>
@@ -39,25 +42,34 @@
             </div>
             <div class="grid gap-5 sm:grid-cols-2">
                 <div>
-                    <label for="po_number_mode">Penomoran PO</label>
-                    <select id="po_number_mode" name="po_number_mode">
-                        <option value="automatic" @selected(old('po_number_mode', 'automatic') === 'automatic')>Otomatis</option>
-                        <option value="manual" @selected(old('po_number_mode') === 'manual')>Masukkan nomor manual</option>
-                    </select>
+                    @if (isset($editingOrder))
+                        <label for="po-number-display">Nomor PO</label>
+                        <input type="hidden" name="po_number_mode" value="manual">
+                        <input type="hidden" name="po_number" value="{{ $editingOrder->po_number }}">
+                        <input id="po-number-display" value="{{ $editingOrder->po_number }}" disabled>
+                    @else
+                        <label for="po_number_mode">Penomoran PO</label>
+                        <select id="po_number_mode" name="po_number_mode">
+                            <option value="automatic" @selected(old('po_number_mode', 'automatic') === 'automatic')>Otomatis</option>
+                            <option value="manual" @selected(old('po_number_mode') === 'manual')>Masukkan nomor manual</option>
+                        </select>
+                    @endif
                 </div>
-                <div>
+                @unless (isset($editingOrder))
+                    <div>
                     <label for="po_number">Nomor PO</label>
                     <input id="po_number" name="po_number" value="{{ old('po_number') }}" placeholder="MYD-{{ now()->format('Y') }}-001">
                     <p id="po-number-hint" class="mt-1 text-[11px] text-slate-400">Nomor dibuat otomatis saat PO disimpan.</p>
                     @error('po_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
-                </div>
+                    </div>
+                @endunless
                 <div>
                     <label for="po_date">Tanggal PO <span class="text-rose-500">*</span></label>
-                    <input id="po_date" name="po_date" type="date" value="{{ old('po_date', now()->toDateString()) }}" required>
+                    <input id="po_date" name="po_date" type="date" value="{{ old('po_date', $editingGroup->po_date ?? now()->toDateString()) }}" required>
                 </div>
                 <div>
                     <label for="delivery_due_at">Tanggal target selesai</label>
-                    <input id="delivery_due_at" name="delivery_due_at" type="date" value="{{ old('delivery_due_at') }}">
+                    <input id="delivery_due_at" name="delivery_due_at" type="date" value="{{ old('delivery_due_at', isset($editingOrder) ? $editingOrder->delivery_due_at?->format('Y-m-d') : '') }}">
                 </div>
             </div>
         </section>
@@ -86,7 +98,7 @@
                         </tr>
                     </thead>
                     <tbody id="po-items" class="divide-y divide-slate-100">
-                        @foreach (old('items', [[]]) as $index => $item)
+                        @foreach (old('items', $items ?? [[]]) as $index => $item)
                             <tr class="bg-white" data-item>
                                 @include('orders.partials.item-fields', ['index' => $index, 'item' => $item])
                             </tr>
@@ -94,12 +106,12 @@
                     </tbody>
                 </table>
             </div>
-            <p class="border-t border-slate-100 px-5 py-2.5 text-[11px] text-slate-400">Grid tetap; daftar item dapat digulir tanpa menggeser susunan kolom. Isian tersimpan otomatis di browser dan dipulihkan jika halaman dimuat ulang.</p>
+            <p class="border-t border-slate-100 px-5 py-2.5 text-[11px] text-slate-400">Grid tetap; daftar item dapat digulir tanpa menggeser susunan kolom. @unless (isset($editingOrder)) Isian tersimpan otomatis di browser dan dipulihkan jika halaman dimuat ulang. @endunless</p>
         </section>
 
         <div class="flex flex-col-reverse justify-end gap-2 sm:flex-row">
-            <a href="{{ route('orders.index') }}" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</a>
-            <button class="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">Simpan Purchase Order</button>
+            <a href="{{ isset($editingOrder) ? route('orders.show', $editingOrder) : route('orders.index') }}" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</a>
+            <button class="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">{{ isset($editingOrder) ? 'Simpan Perubahan' : 'Simpan Purchase Order' }}</button>
         </div>
     </form>
 
@@ -115,7 +127,7 @@
             const draftKey = form.dataset.draftKey;
             let draftRestored = false;
             let draft = null;
-            if (form.dataset.validationErrors !== 'true') {
+            if (draftKey && form.dataset.validationErrors !== 'true') {
                 try {
                     const savedDraft = sessionStorage.getItem(draftKey);
                     draft = savedDraft ? JSON.parse(savedDraft) : null;
@@ -352,6 +364,10 @@
             });
 
             const saveDraft = () => {
+                if (!draftKey) {
+                    return;
+                }
+
                 const values = {};
                 form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
                     if (input.name !== '_token') {

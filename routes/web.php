@@ -7,19 +7,19 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CuttingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryOrderController;
-use App\Http\Controllers\OperationalKanbanController;
-use App\Http\Controllers\RejectController;
 use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\MasterDataImportController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OperationalKanbanController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductMasterController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RejectController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleAccessController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SpkController;
 use App\Http\Controllers\StockCardController;
-use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -81,6 +81,15 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/orders', [ProductionOrderController::class, 'store'])
         ->middleware('permission:orders.create')
         ->name('orders.store');
+    Route::get('/orders/{order}/edit', [ProductionOrderController::class, 'edit'])
+        ->middleware('permission:orders.create')
+        ->name('orders.edit');
+    Route::put('/orders/{order}', [ProductionOrderController::class, 'update'])
+        ->middleware('permission:orders.create')
+        ->name('orders.update');
+    Route::delete('/orders/{order}', [ProductionOrderController::class, 'destroy'])
+        ->middleware('permission:orders.create')
+        ->name('orders.destroy');
     Route::middleware('permission:orders.view')->group(function (): void {
         Route::get('/orders/{order}/pdf', [ProductionOrderController::class, 'pdf'])->name('orders.pdf');
         Route::get('/orders/{order}', [ProductionOrderController::class, 'show'])->name('orders.show');
