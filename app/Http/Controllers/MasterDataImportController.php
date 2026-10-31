@@ -37,7 +37,7 @@ class MasterDataImportController extends Controller
             $output = fopen('php://output', 'wb');
             fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, ['KATEGORI', 'SUB_KATEGORI', 'UKURAN', 'ARTIKEL', 'WARNA', 'JENIS KAIN', 'NAMA BARANG']);
-            fputcsv($output, ['CELANA', 'JOGER', 'All Size', '', 'ABU', 'CHINOS', 'JOGER ABU CHINOS All Size']);
+            fputcsv($output, ['CELANA', 'JOGER', 'All Size', '', 'ABU', 'CHINOS', 'CELANA JOGER All Size ABU CHINOS']);
             fclose($output);
         }, 'template-master-data.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
@@ -113,10 +113,10 @@ class MasterDataImportController extends Controller
                 $colorId = $this->findOrCreate('master_colors', ['name' => $record['color']], 'WRN', $codes);
                 $unitId = $this->findOrCreate('master_units', ['name' => 'Pcs', 'symbol' => 'pcs'], 'UNT', $codes);
                 $name = app(MasterProductName::class)->make(
+                    $record['category'],
                     $record['sub_category'],
-                    $record['color'],
-                    $record['model'],
                     $record['size'],
+                    $record['color'],
                     $record['fabric'],
                 );
 

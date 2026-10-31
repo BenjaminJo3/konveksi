@@ -253,11 +253,11 @@ if (productCategory instanceof HTMLSelectElement
             && productSize.value
             && productColor.value) {
             productName.value = [
+                productCategory.selectedOptions[0].textContent.trim(),
                 productSubCategory.selectedOptions[0].textContent.trim(),
-                productColor.selectedOptions[0].textContent.trim(),
-                productModel.value ? productModel.selectedOptions[0].textContent.trim() : '',
-                productFabric instanceof HTMLInputElement ? productFabric.value.trim() : '',
                 productSize.selectedOptions[0].textContent.trim(),
+                productColor.selectedOptions[0].textContent.trim(),
+                productFabric instanceof HTMLInputElement ? productFabric.value.trim() : '',
             ].filter(Boolean).join(' ');
         } else if (productName instanceof HTMLInputElement) {
             productName.value = '';

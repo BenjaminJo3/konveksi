@@ -523,7 +523,7 @@ class ProductionWorkflowTest extends TestCase
 
         $product = DB::table('master_products')->where('model_id', $model->id)->first();
         $this->assertMatchesRegularExpression('/^BRG-[A-F0-9]{6}$/', $product->code);
-        $this->assertSame('Kaos Navy Raglan Premium Cotton combed 24s M', $product->name);
+        $this->assertSame('Pakaian Kaos M Navy Cotton combed 24s', $product->name);
         $this->assertSame($model->id, $product->model_id);
 
         $this->post(route('master-data.products.store'), [
@@ -536,7 +536,7 @@ class ProductionWorkflowTest extends TestCase
         ])->assertRedirect(route('master-data.products'));
         $modelOptionalProduct = DB::table('master_products')->whereNull('model_id')->first();
         $this->assertNotNull($modelOptionalProduct);
-        $this->assertSame('Kaos Navy CHINOS M', $modelOptionalProduct->name);
+        $this->assertSame('Pakaian Kaos M Navy CHINOS', $modelOptionalProduct->name);
         $this->get(route('master-data.ratios'))
             ->assertOk()
             ->assertSee('Rasio kain per pcs')

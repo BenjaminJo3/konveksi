@@ -11,11 +11,11 @@
             <div class="mb-6 border-b border-slate-100 pb-4">
                 <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Katalog produk</p>
                 <h2 class="mt-1 text-xl font-bold text-slate-900">Input master barang baru</h2>
-                <p class="mt-1 text-xs text-slate-500">Nama barang otomatis mengikuti Sub-kategori, Warna, Model/Artikel (opsional), Jenis bahan (opsional), lalu Ukuran. Kode barang dibuat otomatis setelah disimpan.</p>
+                <p class="mt-1 text-xs text-slate-500">Nama barang otomatis mengikuti Kategori, Sub-kategori, Ukuran, Warna, dan Jenis bahan (opsional). Kode barang dibuat otomatis setelah disimpan.</p>
             </div>
             <form method="POST" action="{{ route('master-data.products.store') }}" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @csrf
-                <div class="sm:col-span-2 lg:col-span-3"><label for="name">Nama barang otomatis</label><input id="name" name="name" value="{{ old('name') }}" readonly placeholder="Pilih sub-kategori, warna, dan ukuran" class="bg-slate-50"></div>
+                <div class="sm:col-span-2 lg:col-span-3"><label for="name">Nama barang otomatis</label><input id="name" name="name" value="{{ old('name') }}" readonly placeholder="Pilih kategori, sub-kategori, ukuran, dan warna" class="bg-slate-50"></div>
                 <div><label for="category_id">Kategori</label><select id="category_id" name="category_id" data-searchable-select data-large-dropdown data-dispatch-change data-placeholder="Cari kategori" required><option value="">Pilih kategori</option>@foreach ($masters['categories'] as $row)<option value="{{ $row->id }}" @selected(old('category_id') == $row->id)>{{ $row->name }}</option>@endforeach</select></div>
                 <div><label for="sub_category_id">Sub-kategori</label><select id="sub_category_id" name="sub_category_id" required><option value="">Pilih sub-kategori</option>@foreach ($masters['subCategories'] as $row)<option value="{{ $row->id }}" data-category="{{ $row->category_id }}" @selected(old('sub_category_id') == $row->id)>{{ $row->name }}</option>@endforeach</select></div>
                 <div><label for="model_id">Model / Artikel (opsional)</label><select id="model_id" name="model_id" @if($errors->has('model_id')) aria-describedby="model_id_error" @endif><option value="">Tanpa model</option>@foreach ($masters['models'] as $row)<option value="{{ $row->id }}" data-category="{{ $row->category_id }}" data-sub-category="{{ $row->sub_category_id }}" @selected(old('model_id') == $row->id)>{{ $row->name }}</option>@endforeach</select>@error('model_id')<p id="model_id_error" class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror</div>

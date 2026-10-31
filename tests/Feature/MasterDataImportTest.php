@@ -36,7 +36,7 @@ class MasterDataImportTest extends TestCase
         $this->assertDatabaseHas('master_colors', ['name' => 'UNGU']);
         $this->assertDatabaseHas('master_units', ['name' => 'Pcs', 'symbol' => 'pcs']);
         $this->assertDatabaseHas('master_products', [
-            'name' => 'CIPIR PENDEK UNGU BUNGA All Size',
+            'name' => 'RAYON CIPIR PENDEK All Size UNGU',
         ]);
     }
 
@@ -59,7 +59,7 @@ class MasterDataImportTest extends TestCase
         $this->assertDatabaseMissing('master_categories', ['name' => 'CHINOS']);
         $this->assertDatabaseCount('master_models', 0);
         $this->assertDatabaseHas('master_products', [
-            'name' => 'JOGER ABU CHINOS M',
+            'name' => 'CELANA JOGER M ABU CHINOS',
             'fabric_name' => 'CHINOS',
             'model_id' => null,
         ]);
@@ -116,7 +116,7 @@ class MasterDataImportTest extends TestCase
         ]);
         $upload = ['file' => UploadedFile::fake()->createWithContent('valid.csv', $validRow)];
         $this->post(route('master-data.import.store'), $upload)->assertSessionHas('success');
-        $this->assertDatabaseHas('master_products', ['name' => 'CIPIR PENDEK UNGU BUNGA M']);
+        $this->assertDatabaseHas('master_products', ['name' => 'RAYON CIPIR PENDEK M UNGU']);
         $duplicateUpload = ['file' => UploadedFile::fake()->createWithContent('duplicate.csv', $validRow)];
         $this->post(route('master-data.import.store'), $duplicateUpload)
             ->assertSessionHas('success', '0 barang berhasil diimpor; 1 duplikat dilewati.');
@@ -140,7 +140,7 @@ class MasterDataImportTest extends TestCase
                 ->post(route('master-data.import.store'), ['file' => $file])
                 ->assertRedirect(route('master-data.products'))
                 ->assertSessionHas('success', '1 barang berhasil diimpor; 0 duplikat dilewati.');
-            $this->assertDatabaseHas('master_products', ['name' => 'CIPIR PENDEK UNGU BUNGA All Size']);
+            $this->assertDatabaseHas('master_products', ['name' => 'RAYON CIPIR PENDEK All Size UNGU']);
         } finally {
             @unlink($temporaryFile);
         }

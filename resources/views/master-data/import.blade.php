@@ -46,7 +46,7 @@
                         <tr><td class="px-3 py-2.5 font-semibold">ARTIKEL</td><td class="px-3 py-2.5">Model / artikel · boleh kosong</td></tr>
                         <tr><td class="px-3 py-2.5 font-semibold">WARNA</td><td class="px-3 py-2.5">UNGU · wajib</td></tr>
                         <tr><td class="px-3 py-2.5 font-semibold">JENIS KAIN</td><td class="px-3 py-2.5">CHINOS · opsional, disimpan pada jenis bahan</td></tr>
-                        <tr><td class="px-3 py-2.5 font-semibold">NAMA BARANG</td><td class="px-3 py-2.5">Otomatis: SUB_KATEGORI + WARNA + ARTIKEL + JENIS KAIN + UKURAN · opsional</td></tr>
+                        <tr><td class="px-3 py-2.5 font-semibold">NAMA BARANG</td><td class="px-3 py-2.5">Otomatis: KATEGORI + SUB_KATEGORI + UKURAN + WARNA + JENIS KAIN · opsional</td></tr>
                     </tbody>
                 </table>
             </div>

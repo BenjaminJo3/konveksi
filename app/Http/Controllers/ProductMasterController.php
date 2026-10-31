@@ -231,14 +231,11 @@ class ProductMasterController extends Controller
 
         $values['model_id'] = $values['model_id'] ?? null;
         $this->assertProductHierarchy($values);
-        $modelName = $values['model_id'] === null
-            ? null
-            : DB::table('master_models')->where('id', $values['model_id'])->value('name');
         $values['name'] = $productName->make(
+            DB::table('master_categories')->where('id', $values['category_id'])->value('name'),
             DB::table('master_sub_categories')->where('id', $values['sub_category_id'])->value('name'),
-            DB::table('master_colors')->where('id', $values['color_id'])->value('name'),
-            $modelName,
             DB::table('master_sizes')->where('id', $values['size_id'])->value('name'),
+            DB::table('master_colors')->where('id', $values['color_id'])->value('name'),
             $values['fabric_name'] ?? null,
         );
         $values['code'] = app(MasterDataCodeGenerator::class)->generate('BRG', 'master_products');
