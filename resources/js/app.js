@@ -493,6 +493,12 @@ document.querySelectorAll('[data-demo-email]').forEach((button) => {
 
 const poItems = document.querySelector('#po-items');
 const poItemTemplate = document.querySelector('#po-item-template');
+if (!(poItems instanceof HTMLElement)) {
+    const userId = document.querySelector('meta[name="user-id"]')?.content;
+    if (userId) {
+        sessionStorage.removeItem(`po-create-draft-${userId}`);
+    }
+}
 if (poItems instanceof HTMLElement && poItemTemplate instanceof HTMLTemplateElement) {
     const subCategoryList = document.querySelector('#po-sub-categories');
     const modelList = document.querySelector('#po-models');

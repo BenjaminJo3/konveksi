@@ -11,7 +11,7 @@
         <p class="mt-1 text-sm text-slate-500">Satu nomor PO dapat berisi beberapa item atau varian ukuran dan warna.</p>
     </div>
 
-    <form method="POST" action="{{ route('orders.store') }}" class="space-y-5">
+    <form method="POST" action="{{ route('orders.store') }}" data-draft-key="po-create-draft-{{ auth()->id() }}" data-validation-errors="{{ $errors->any() ? 'true' : 'false' }}" class="space-y-5">
         @csrf
         <datalist id="po-sub-categories">
             @foreach ($masters['subCategories'] as $subCategory)<option value="{{ $subCategory->name }}" data-sub-category-id="{{ $subCategory->id }}" data-category-id="{{ $subCategory->category_id }}">@endforeach
@@ -94,7 +94,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="border-t border-slate-100 px-5 py-2.5 text-[11px] text-slate-400">Grid tetap; daftar item dapat digulir tanpa menggeser susunan kolom.</p>
+            <p class="border-t border-slate-100 px-5 py-2.5 text-[11px] text-slate-400">Grid tetap; daftar item dapat digulir tanpa menggeser susunan kolom. Isian tersimpan otomatis di browser dan dipulihkan jika halaman dimuat ulang.</p>
         </section>
 
         <div class="flex flex-col-reverse justify-end gap-2 sm:flex-row">
@@ -111,6 +111,45 @@
     <script>
         (() => {
             const items = document.querySelector('#po-items');
+            const form = items.closest('form');
+            const draftKey = form.dataset.draftKey;
+            let draftRestored = false;
+            let draft = null;
+            if (form.dataset.validationErrors !== 'true') {
+                try {
+                    const savedDraft = sessionStorage.getItem(draftKey);
+                    draft = savedDraft ? JSON.parse(savedDraft) : null;
+                } catch (error) {
+                    console.error('Draft PO tidak dapat dibaca dari penyimpanan browser.', error);
+                }
+            }
+
+            if (draft && typeof draft === 'object' && draft.values && typeof draft.values === 'object') {
+                const itemIndexes = Object.keys(draft.values)
+                    .map((name) => name.match(/^items\[(\d+)\]\[/))
+                    .filter(Boolean)
+                    .map((match) => Number(match[1]));
+                const requiredRows = itemIndexes.length > 0 ? Math.max(...itemIndexes) + 1 : 1;
+                const template = document.querySelector('#po-item-template');
+                while (items.querySelectorAll('[data-item]').length < requiredRows) {
+                    const index = items.querySelectorAll('[data-item]').length;
+                    const row = template.content.cloneNode(true);
+                    row.querySelectorAll('[name]').forEach((input) => {
+                        input.name = input.name.replaceAll('__INDEX__', String(index));
+                    });
+                    items.append(row);
+                }
+
+                Object.entries(draft.values).forEach(([name, value]) => {
+                    const input = form.elements.namedItem(name);
+                    if ((input instanceof HTMLInputElement || input instanceof HTMLSelectElement || input instanceof HTMLTextAreaElement)
+                        && typeof value === 'string') {
+                        input.value = value;
+                    }
+                });
+                draftRestored = true;
+            }
+
             const sources = {
                 categories: [...items.querySelector('[data-po-category]').options]
                     .filter((option) => option.value !== ''),
@@ -196,7 +235,7 @@
                     option.dataset.subCategoryId === selectedSubCategory?.dataset.subCategoryId
                     && normalize(option.dataset.size) === normalize(sizeInput.value));
                 const ratioInput = field('ratio');
-                if (ratioInput instanceof HTMLInputElement) {
+                if (ratioInput instanceof HTMLInputElement && !draftRestored) {
                     ratioInput.value = matchingRatio?.value ?? '0.25';
                 }
             };
@@ -311,6 +350,30 @@
                 });
                 updateSuggestions(item);
             });
+
+            const saveDraft = () => {
+                const values = {};
+                form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+                    if (input.name !== '_token') {
+                        values[input.name] = input.value;
+                    }
+                });
+
+                try {
+                    sessionStorage.setItem(draftKey, JSON.stringify({ values }));
+                } catch (error) {
+                    console.error('Draft PO tidak dapat disimpan ke penyimpanan browser.', error);
+                }
+            };
+
+            form.addEventListener('input', saveDraft);
+            form.addEventListener('change', saveDraft);
+            form.addEventListener('click', (event) => {
+                if (event.target.closest('#add-po-item, [data-remove-item]')) {
+                    window.setTimeout(saveDraft, 0);
+                }
+            });
+            form.addEventListener('submit', saveDraft);
         })();
     </script>
 @endsection
