@@ -1024,7 +1024,9 @@ class ProductionWorkflowTest extends TestCase
         $this->get(route('orders.index'))
             ->assertOk()
             ->assertDontSee(route('orders.edit', $order), false)
-            ->assertSee('Tidak dapat dihapus');
+            ->assertSee('Hapus')
+            ->assertSee('PO sudah diproses')
+            ->assertSee('disabled title="Hanya PO Draft tanpa aktivitas yang dapat dihapus."', false);
         $this->assertDatabaseHas('production_orders', ['id' => $order->id, 'status' => 'draft']);
     }
 
