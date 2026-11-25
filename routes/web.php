@@ -145,3 +145,5 @@ Route::middleware('auth')->group(function (): void {
         });
     });
 });
+
+Route::get('/animation3d', fn () => view('animation3d'))->name('animation3d');
